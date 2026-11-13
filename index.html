@@ -299,14 +299,14 @@ function cardHtml(u) {
   const t = im ? im.t : null;
   const style = t ? `--o:${t.o / 100};--x:${t.x}%;--y:${t.y}%;--z:${t.z / 100}` : '';
   const q = u.quality != null ? u.quality + '+' : '–', d = u.defense != null ? u.defense + '+' : '–';
-  return `<article class="card" data-sid="${esc(sid)}" data-aid="${esc(armyKey(u))}" data-n="${u.size || 1}" data-t="${esc(toughOf(u))}" style="${style}">
+  return `<article class="card" data-sid="${esc(sid)}" data-aid="${esc(armyKey(u))}" data-qty="${qty.get(sid) || 1}" data-n="${u.size || 1}" data-t="${esc(toughOf(u))}" style="${style}">
     <div class="body">
       <div class="art" ${im ? '' : 'style="background-color:#d8d8d8"'}></div>${im ? `<img class="art" src="${im.src}" alt="" draggable="false">` : ''}
       <div class="ov${$('stack').checked ? ' stack' : ''}">
         <div class="namebox"><div class="nm"><span class="ed" data-nm>${esc(nameOf(u))}</span> [${u.size || 1}]</div><div>${costOf(u)}pts</div></div>
         <div class="fac ed" data-fac="${esc(armyKey(u))}">${esc(factionOf(u))}</div>
-        <div class="rules">${rulesOf(u).map(r => `<span class="chip ed" data-rule="${esc(r)}" title="Click to rename (this faction only)">${esc(ruleDisp(r, armyKey(u)))}</span>`).join('')}</div>
-        <div class="weapons">${weaponsOf(u).map(w => `<div class="wpn ed" data-wpn="${esc(w)}" title="Click to rename (this faction only)">${esc(wpnDisp(w, armyKey(u)))}</div>`).join('')}</div>
+        <div class="rules">${rulesOf(u).map(r => `<span class="chip ed" data-rule="${esc(r)}">${esc(ruleDisp(r, armyKey(u)))}</span>`).join('')}</div>
+        <div class="weapons">${weaponsOf(u).map(w => `<div class="wpn ed" data-wpn="${esc(w)}">${esc(wpnDisp(w, armyKey(u)))}</div>`).join('')}</div>
         <div class="stats">${[['Quality', q], ['Defense', d], ['Tough', toughOf(u)]].map(([l, v]) =>
           `<div class="stat"><b>${l}</b><i>${esc(v)}</i></div>`).join('')}</div>
       </div>
@@ -315,7 +315,7 @@ function cardHtml(u) {
 }
 function ctlHtml(u) {
   const sid = sidOf(u), im = imgs.get(sid);
-  return `<div class="ctl"><div><span>Print qty</span><input type="number" min="1" max="20" value="${qty.get(sid) || 1}" data-q>${im ? '<button data-rm class="rm">Remove saved image</button>' : ''}</div>` +
+  return `<div class="ctl"><div><span>Play qty</span><input type="number" min="1" max="20" value="${qty.get(sid) || 1}" data-q>${im ? '<button data-rm class="rm">Remove saved image</button>' : ''}</div>` +
     (im ? TR.map(([k, l, mn, mx]) => `<div><span>${l}</span><input type="range" min="${mn}" max="${mx}" value="${im.t[k]}" data-tr="${k}"></div>`).join('') : '') + '</div>';
 }
 
@@ -476,12 +476,14 @@ function buildLookup() {
   return m;
 }
 function openPlay() {
-  play.list = [...document.querySelectorAll('#grid .shell .card')].map(c => {
+  play.list = [...document.querySelectorAll('#grid .shell .card')].flatMap(c => {
     const ref = c.classList.contains('ref');
     const caster = !ref && [...c.querySelectorAll('.chip')].some(ch => ruleBase(ch.dataset.rule || ch.textContent).toLowerCase() === 'caster');
-    return { el: c, ref, caster, rk: c.dataset.rk || '', title: c.querySelector('[data-cur]')?.dataset.cur || '',
-      aid: c.dataset.aid || '', fac: c.querySelector('.fac')?.textContent || '', sid: ref ? null : c.dataset.sid, n: ref ? 0 : Number(c.dataset.n) || 1, max: ref ? 0 : Number(c.dataset.t) || 0,   // 0 = no Tough, nothing to track
-      name: (c.querySelector('.nm .ed') || c.querySelector('.top .ed'))?.textContent || 'Card' };
+    const q = ref ? 1 : Math.max(1, Number(c.dataset.qty) || 1);   // Play qty: each copy is its own tracked card
+    const label = (c.querySelector('.nm .ed') || c.querySelector('.top .ed'))?.textContent || 'Card';
+    return Array.from({ length: q }, (_, i) => ({ el: c, ref, caster, rk: c.dataset.rk || '', title: c.querySelector('[data-cur]')?.dataset.cur || '',
+      aid: c.dataset.aid || '', fac: c.querySelector('.fac')?.textContent || '', sid: ref ? null : `${c.dataset.sid}#${i}`, n: ref ? 0 : Number(c.dataset.n) || 1, max: ref ? 0 : Number(c.dataset.t) || 0,   // 0 = no Tough, nothing to track
+      name: q > 1 ? `${label} (${i + 1}/${q})` : label }));
   });
   if (!play.list.length) return;
   play.lookup = buildLookup();
