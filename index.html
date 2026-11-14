@@ -45,6 +45,11 @@ header input[type=text]{flex:1;min-width:240px;padding:8px 10px;border:1px solid
 .ucopies{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;width:100%;margin-bottom:4px}
 .ucopies button{padding:6px 12px;font-size:13px;background:var(--panel);color:#fff;border:1px solid var(--line)}
 .ucopies button.on{outline:2px solid var(--amber);background:#333}
+.camov{position:fixed;inset:0;z-index:200;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.camov video{width:min(96vw,420px);height:min(70vh,588px);object-fit:cover;border-radius:12px;background:#111}
+.camov .camacts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.camov button{padding:12px 18px;font-size:15px}
+.camov .danger{background:#d9453f;color:#fff}
 .ref .body{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
 .ref .top,.ref .rb{position:relative;z-index:1}
 .ref .rb{background:color-mix(in srgb, var(--cRefBody) 88%, transparent)}
@@ -224,6 +229,7 @@ const fieldOf = id => FIELDS.find(f => f[0] === id);
 const colorOf = id => COLORS.find(c => c[0] === id);
 
 let army = null;
+const bookNames = new Map(); // armyId -> faction name from Army Forge book API
 const spellMap = new Map(); // armyId -> spell card key
 const ruleNames = new Map(), wpnNames = new Map(); // key: armyId::name -> custom name (per faction)
 const imgs = new Map(), qty = new Map(), names = new Map(), facs = new Map();
@@ -357,30 +363,24 @@ function wpnDisp(label, aid) {
   return p.pre + (ov || p.name) + p.stats;
 }
 const armyKey = u => String(u.armyId || '_');
-function factionHint(units) {
-  const counts = new Map();
-  const tail = /((?:[A-Z][a-z]+\s+){0,4}(?:Brothers|Sisters|Hives|Raiders|Cults|Dynasty|Empire|Order|Legion|Guard|Swarm|Clans?|Tribes?|Drones|Robots?|Pirates?|Daemons?|Infected|Overlords|Marauders|Syndicate|Corporation|Collective|Watch|Host|Cabal|Prime\s+Brothers|Battle\s+Brothers))$/;
-  for (const u of units || []) {
-    const raw = String(u.genericName || u.name || u.customName || '').trim(); if (!raw) continue;
-    let key = (raw.match(tail) || [])[1];
-    if (!key) {
-      const parts = raw.split(/\s+/).filter(Boolean), take = [];
-      for (let i = parts.length - 1; i >= 0 && take.length < 3; i--) {
-        if (/^[A-Z]/.test(parts[i]) || /^(of|the|and)$/i.test(parts[i])) take.unshift(parts[i]); else break;
-      }
-      key = take.join(' ') || raw;
-    }
-    key = key.trim(); if (key) counts.set(key, (counts.get(key) || 0) + 1);
-  }
-  let best = '', n = 0; for (const [k, c] of counts) if (c > n) { best = k; n = c; }
-  return best;
+const GS = { gf: 2, aof: 1, gff: 3, aofs: 4, aofr: 5, gfs: 6 }; // Army Forge gameSystem numbers
+async function resolveBookNames(units, gameSystem) {
+  const gs = GS[String(gameSystem || 'gf').toLowerCase()] || 2;
+  const ids = [...new Set((units || []).map(u => u.armyId).filter(Boolean))];
+  await Promise.all(ids.map(async id => {
+    if (bookNames.has(id)) return;
+    try {
+      const r = await fetch(`https://army-forge.onepagerules.com/api/army-books/${encodeURIComponent(id)}?gameSystem=${gs}`);
+      if (!r.ok) return;
+      const j = await r.json();
+      const n = (j.name || j.genericName || '').split('||')[0].trim();
+      if (n) bookNames.set(id, n);
+    } catch (_) {}
+  }));
 }
 function factionOf(u) {
   if (facs.has(armyKey(u))) return facs.get(armyKey(u));
-  // Prefer real faction inferred from unit names for this armyId — not the list title
-  const same = (army?.units || []).filter(x => armyKey(x) === armyKey(u));
-  const hint = factionHint(same.length ? same : [u]);
-  if (hint) return hint;
+  if (u?.armyId && bookNames.has(u.armyId)) return bookNames.get(u.armyId);
   return 'Faction';
 }
 const nameOf = u => names.get(sidOf(u)) || u.customName || u.name || u.genericName || 'Unit';
@@ -518,6 +518,34 @@ function render() {
 
 // ---------- events ----------
 const status = (m, k) => { $('status').textContent = m || ''; $('status').className = k || ''; };
+async function openCamera(card) {
+  if (!navigator.mediaDevices?.getUserMedia) return status('Camera not available in this browser.', 'err');
+  const sid = card.dataset.sid; if (!sid) return;
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
+  catch (err) { return status('Camera permission denied or unavailable.', 'err'); }
+  const ov = document.createElement('div'); ov.className = 'camov';
+  ov.innerHTML = `<video playsinline autoplay muted></video>
+    <div class="camacts"><button type="button" data-shot>Capture</button><button type="button" class="danger" data-cancel>Cancel</button></div>`;
+  document.body.appendChild(ov);
+  const video = ov.querySelector('video'); video.srcObject = stream;
+  const stop = () => { stream.getTracks().forEach(t => t.stop()); ov.remove(); };
+  ov.querySelector('[data-cancel]').onclick = stop;
+  ov.querySelector('[data-shot]').onclick = () => {
+    const w = video.videoWidth || 756, h = video.videoHeight || 1056;
+    // centre-crop to card aspect (cw/ch ≈ 63/88)
+    const aspect = 63 / 88;
+    let sw = w, sh = h, sx = 0, sy = 0;
+    if (w / h > aspect) { sw = h * aspect; sx = (w - sw) / 2; } else { sh = w / aspect; sy = (h - sh) / 2; }
+    const cv = document.createElement('canvas'); cv.width = 756; cv.height = 1056;
+    cv.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+    const src = cv.toDataURL('image/jpeg', 0.92);
+    imgs.set(sid, { src, t: { o: 100, x: 0, y: 0, z: 100 } });
+    const u = army?.units?.find(u => String(sidOf(u)) === sid);
+    if (u) saveImg(u); else idb.set(sid, imgs.get(sid));
+    stop(); render();
+  };
+}
 const ask = (msg, cur) => { const v = prompt(msg, cur); return v && v.trim() && v.trim() !== cur ? v.trim() : null; };
 const sidFrom = el => el.closest('[data-sid]').dataset.sid;
 
@@ -534,8 +562,9 @@ $('grid').addEventListener('click', e => {
     t.closest('.imgmenu').hidden = true; return;
   }
   if (t.dataset.cam !== undefined) {
-    const inp = t.closest('.body, .card')?.querySelector('input[data-file][data-cam]'); if (inp) inp.click();
-    t.closest('.imgmenu').hidden = true; return;
+    const card = t.closest('.card'); t.closest('.imgmenu').hidden = true;
+    if (card) openCamera(card);
+    return;
   }
   const sid = (t.closest('[data-sid]') || t.closest('.shell')?.querySelector('[data-sid]'))?.dataset.sid, aid = t.closest('[data-aid]')?.dataset.aid;
   const rename = (map, orig, label) => {
@@ -686,6 +715,7 @@ async function applyList(entry, fromNet) {
   $('url').value = entry.url || entry.id;
   ruleNames.clear(); wpnNames.clear(); names.clear(); facs.clear(); qty.clear(); imgs.clear();
   applyState(entry.state);
+  await resolveBookNames(army.units, army.gameSystem);
   const restored = await restoreImgs(army.units);
   const tag = fromNet ? 'Imported' : 'Restored';
   status(`${tag} “${army.name || listId}” · ${(army.units || []).length} units · ${army.listPoints ?? '?'} pts` +
@@ -763,9 +793,19 @@ function showPlay() {
   wrap.className = 'pwrap' + (play.dead.has(it.sid) ? ' dead' : '');
   wrap.appendChild(clone); $('pStage').replaceChildren(wrap);
   renderTrack(); renderToc(); fitPlay();
-  const grp = play.list.map((x, k) => x.ref === it.ref ? k : -1).filter(k => k >= 0), pos = grp.indexOf(play.i);
+  const grp = play.list.map((x, k) => {
+    if (x.ref !== it.ref) return -1;
+    if (!x.ref && x.copies > 1 && x.copy !== 1) return -1; // only count primary copies in swipe group
+    return k;
+  }).filter(k => k >= 0);
+  // If viewing copy 2+, still show position of that unit family
+  let pos = grp.indexOf(play.i);
+  if (pos < 0 && !it.ref) {
+    const prim = play.list.findIndex(x => !x.ref && x.baseSid === it.baseSid && x.copy === 1);
+    pos = grp.indexOf(prim);
+  }
   $('pPos').textContent = `${it.ref ? 'Ref ' : ''}${pos + 1} / ${grp.length} · ${it.name}`;
-  $('pPrev').disabled = pos === 0; $('pNext').disabled = pos === grp.length - 1;
+  $('pPrev').disabled = pos <= 0; $('pNext').disabled = pos < 0 || pos >= grp.length - 1;
 }
 function fitPlay() {
   const st = $('pStage'), w = st.firstChild; if (!w) return;
@@ -832,7 +872,14 @@ function renderToc() {
 // arrows/swipe move within the current group: unit cards, or reference cards
 function go(d) {
   const cur = play.list[play.i];
-  for (let n = play.i + d; n >= 0 && n < play.list.length; n += d) if (play.list[n].ref === cur.ref) { play.i = n; return showPlay(); }
+  for (let n = play.i + d; n >= 0 && n < play.list.length; n += d) {
+    const x = play.list[n];
+    if (x.ref !== cur.ref) continue;
+    // Unit cards: skip extra copies — Unit 1/2 buttons handle those
+    if (!x.ref && cur.baseSid && x.baseSid === cur.baseSid) continue;
+    if (!x.ref && x.copies > 1 && x.copy !== 1) continue;
+    play.i = n; return showPlay();
+  }
 }
 
 // rule description popup: hover on desktop, tap on touch
