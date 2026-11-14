@@ -1041,9 +1041,35 @@ let ptype = 'mouse';
 $('pStage').addEventListener('pointerdown', e => { ptype = e.pointerType; });
 $('pStage').addEventListener('pointerover', e => { if (e.pointerType === 'mouse') showTip(e.target.closest('[data-tip]')); });
 $('pStage').addEventListener('pointerout', e => { if (e.pointerType === 'mouse') hideTip(); });
+function doRoll() {
+  if (!play.dice) return;
+  const d = play.dice;
+  // Read live values from the stage form if present
+  const root = $('pStage');
+  const nEl = root.querySelector('[data-dn]'), tEl = root.querySelector('[data-dt]');
+  if (nEl) d.n = Math.max(1, Math.min(40, parseInt(nEl.value) || 1));
+  if (tEl) d.target = Math.max(2, Math.min(6, parseInt(tEl.value) || 4));
+  const n = Math.max(1, Math.min(40, Number(d.n) || 1));
+  const target = Math.max(2, Math.min(6, Number(d.target) || 4));
+  const rolls = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6));
+  d.n = n; d.target = target;
+  d.last = {
+    rolls,
+    pass: rolls.filter(r => r >= target).length,
+    ones: rolls.filter(r => r === 1).length,
+    sixes: rolls.filter(r => r === 6).length
+  };
+  showPlay();
+}
 $('pStage').addEventListener('click', e => {
+  if (e.target.closest('[data-a=roll]')) { e.preventDefault(); e.stopPropagation(); return doRoll(); }
   if (ptype === 'mouse') return;
   const el = e.target.closest('[data-tip]'); el && $('pTip')._el !== el ? showTip(el) : hideTip();
+});
+$('pStage').addEventListener('change', e => {
+  const t = e.target, d = play.dice; if (!d) return;
+  if (t.matches('[data-dn]')) d.n = Math.max(1, Math.min(40, parseInt(t.value) || 1));
+  if (t.matches('[data-dt]')) d.target = Math.max(2, Math.min(6, parseInt(t.value) || 4));
 });
 
 $('playBtn').onclick = openPlay; $('pClose').onclick = closePlay;
@@ -1069,19 +1095,7 @@ $('pTrack').onclick = e => {
     play.dice = { n: 1, target: 4, last: null };
     return showPlay();
   }
-  if (a === 'roll') {
-    const d = play.dice || { n: 1, target: 4 };
-    const n = Math.max(1, Math.min(40, Number(d.n) || 1));
-    const target = Math.max(2, Math.min(6, Number(d.target) || 4));
-    const rolls = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6));
-    d.n = n; d.target = target;
-    d.last = {
-      rolls, pass: rolls.filter(r => r >= target).length,
-      ones: rolls.filter(r => r === 1).length,
-      sixes: rolls.filter(r => r === 6).length
-    };
-    play.dice = d; return showPlay();
-  }
+  if (a === 'roll') return doRoll();
   if (a === 'spells') {
     // Toggle: show matching spell ref card on stage, keep this unit's bottom UI
     if (play.back != null) {
