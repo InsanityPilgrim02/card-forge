@@ -45,11 +45,11 @@ header input[type=text]{flex:1;min-width:240px;padding:8px 10px;border:1px solid
 .ucopies{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;width:100%;margin-bottom:4px}
 .ucopies button{padding:6px 12px;font-size:13px;background:var(--panel);color:#fff;border:1px solid var(--line)}
 .ucopies button.on{outline:2px solid var(--amber);background:#333}
-.camov{position:fixed;inset:0;z-index:200;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
-.camov video{width:min(96vw,420px);height:min(70vh,588px);object-fit:cover;border-radius:12px;background:#111}
-.camov .camacts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-.camov button{padding:12px 18px;font-size:15px}
-.camov .danger{background:#d9453f;color:#fff}
+.camfeed{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:4;background:#000}
+.cambar{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;gap:6px;justify-content:center;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,.8))}
+.cambar button{padding:8px 14px;font-size:12px}
+.cambar .danger{background:#d9453f;color:#fff}
+.card.cam-on .tool,.card.cam-on .imgmenu{display:none!important}
 .ref .body{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
 .ref .top,.ref .rb{position:relative;z-index:1}
 .ref .rb{background:color-mix(in srgb, var(--cRefBody) 88%, transparent)}
@@ -363,25 +363,73 @@ function wpnDisp(label, aid) {
   return p.pre + (ov || p.name) + p.stats;
 }
 const armyKey = u => String(u.armyId || '_');
-const GS = { gf: 2, aof: 1, gff: 3, aofs: 4, aofr: 5, gfs: 6 }; // Army Forge gameSystem numbers
-async function resolveBookNames(units, gameSystem) {
-  const gs = GS[String(gameSystem || 'gf').toLowerCase()] || 2;
-  const ids = [...new Set((units || []).map(u => u.armyId).filter(Boolean))];
-  await Promise.all(ids.map(async id => {
-    if (bookNames.has(id)) return;
-    try {
-      const r = await fetch(`https://army-forge.onepagerules.com/api/army-books/${encodeURIComponent(id)}?gameSystem=${gs}`);
-      if (!r.ok) return;
-      const j = await r.json();
-      const n = (j.name || j.genericName || '').split('||')[0].trim();
-      if (n) bookNames.set(id, n);
-    } catch (_) {}
-  }));
+// Army Forge army-book API has no CORS — infer faction per armyId from unit names
+const FACTIONS = [
+  'Prime Brothers','Battle Brothers','Alien Hives','Blessed Sisters','Dao Union','Dwarf Guilds',
+  'Elven Union','Eternal Dynasty','Havoc Brothers','High Elf Fleets','Human Defense Force',
+  'Infected Colonies','Machine Cult','Orc Marauders','Phantom Protocol','Robot Legions',
+  'Saorian Savages','Soul-Snatcher Cults','TAO Coalition','Vampiric Undead','Warfleets Riftany',
+  'Jackals','Marauders','Goblins','Ratmen','Undead Hordes','Empire of Rift-Kin','Knight Brothers',
+  'Custodian Brothers','Wolves','Beastmen','Dark Elves','Wood Elves','Dread Elves','Rift Daemons',
+  'Blood Brothers','Watcher Brothers','Sky-Riders','Titan-Lords'
+];
+function inferFaction(units) {
+  const names = (units || []).map(u =>
+    [u.genericName, u.name, u.customName].filter(Boolean).map(s => String(s).replace(/\s+/g, ' ').trim()).join(' ')
+  ).filter(Boolean);
+  if (!names.length) return '';
+  const blob = names.join('\n');
+  // 1) known faction label appears in any unit name
+  for (const f of FACTIONS) {
+    const re = new RegExp(f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'), 'i');
+    if (names.some(n => re.test(n))) return f;
+  }
+  // 2) keyword patterns for awkward generic names
+  if (/prime\s+(brother|leader|master|guard|support)/i.test(blob)) return 'Prime Brothers';
+  if (/battle\s+(brother|leader|master)/i.test(blob)) return 'Battle Brothers';
+  if (/\bhive\b|alien\s*hive|nomad\s*hive|xen[o-]|brood\s*brother/i.test(blob)) return 'Alien Hives';
+  if (/defense\s*force|hdf\b/i.test(blob)) return 'Human Defense Force';
+  if (/robot\s*legion|walker\s*bot|drone\s*bot/i.test(blob)) return 'Robot Legions';
+  // 3) longest shared multi-word suffix across units of this army
+  if (names.length >= 2) {
+    const endings = new Map();
+    for (const n of names) {
+      const w = n.split(' ');
+      for (let len = Math.min(3, w.length); len >= 2; len--) {
+        const e = w.slice(-len).join(' ');
+        endings.set(e, (endings.get(e) || 0) + 1);
+      }
+    }
+    let best = '', sc = 0;
+    for (const [e, c] of endings) {
+      if (c < 2) continue;
+      const s = c * 10 + e.length;
+      if (s > sc) { sc = s; best = e; }
+    }
+    if (best) return best;
+  }
+  // 4) single unit: last 2 words if they look like a label
+  const w = names[0].split(' ');
+  if (w.length >= 2) return w.slice(-2).join(' ');
+  return names[0];
+}
+async function resolveBookNames(units) {
+  bookNames.clear();
+  const by = new Map();
+  for (const u of units || []) {
+    const id = u.armyId; if (!id) continue;
+    if (!by.has(id)) by.set(id, []);
+    by.get(id).push(u);
+  }
+  for (const [id, list] of by) {
+    const n = inferFaction(list);
+    if (n) bookNames.set(id, n);
+  }
 }
 function factionOf(u) {
   if (facs.has(armyKey(u))) return facs.get(armyKey(u));
   if (u?.armyId && bookNames.has(u.armyId)) return bookNames.get(u.armyId);
-  return 'Faction';
+  return inferFaction([u]) || 'Faction';
 }
 const nameOf = u => names.get(sidOf(u)) || u.customName || u.name || u.genericName || 'Unit';
 
@@ -521,26 +569,36 @@ const status = (m, k) => { $('status').textContent = m || ''; $('status').classN
 async function openCamera(card) {
   if (!navigator.mediaDevices?.getUserMedia) return status('Camera not available in this browser.', 'err');
   const sid = card.dataset.sid; if (!sid) return;
+  const body = card.querySelector('.body') || card;
+  // tear down any existing on-card camera
+  card.querySelectorAll('.camfeed,.cambar').forEach(e => e.remove());
+  card.classList.remove('cam-on');
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
   catch (err) { return status('Camera permission denied or unavailable.', 'err'); }
-  const ov = document.createElement('div'); ov.className = 'camov';
-  ov.innerHTML = `<video playsinline autoplay muted></video>
-    <div class="camacts"><button type="button" data-shot>Capture</button><button type="button" class="danger" data-cancel>Cancel</button></div>`;
-  document.body.appendChild(ov);
-  const video = ov.querySelector('video'); video.srcObject = stream;
-  const stop = () => { stream.getTracks().forEach(t => t.stop()); ov.remove(); };
-  ov.querySelector('[data-cancel]').onclick = stop;
-  ov.querySelector('[data-shot]').onclick = () => {
+  const video = document.createElement('video');
+  video.className = 'camfeed'; video.setAttribute('playsinline', ''); video.muted = true; video.autoplay = true;
+  const bar = document.createElement('div');
+  bar.className = 'cambar';
+  bar.innerHTML = '<button type="button" data-shot>Capture</button><button type="button" class="danger" data-cancel>Cancel</button>';
+  body.appendChild(video); body.appendChild(bar);
+  card.classList.add('cam-on');
+  video.srcObject = stream;
+  const stop = () => {
+    stream.getTracks().forEach(t => t.stop());
+    video.remove(); bar.remove();
+    card.classList.remove('cam-on');
+  };
+  bar.querySelector('[data-cancel]').onclick = e => { e.stopPropagation(); stop(); };
+  bar.querySelector('[data-shot]').onclick = e => {
+    e.stopPropagation();
     const w = video.videoWidth || 756, h = video.videoHeight || 1056;
-    // centre-crop to card aspect (cw/ch ≈ 63/88)
-    const aspect = 63 / 88;
+    const aspect = (card.clientWidth || 63) / (card.clientHeight || 88);
     let sw = w, sh = h, sx = 0, sy = 0;
     if (w / h > aspect) { sw = h * aspect; sx = (w - sw) / 2; } else { sh = w / aspect; sy = (h - sh) / 2; }
     const cv = document.createElement('canvas'); cv.width = 756; cv.height = 1056;
     cv.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
-    const src = cv.toDataURL('image/jpeg', 0.92);
-    imgs.set(sid, { src, t: { o: 100, x: 0, y: 0, z: 100 } });
+    imgs.set(sid, { src: cv.toDataURL('image/jpeg', 0.92), t: { o: 100, x: 0, y: 0, z: 100 } });
     const u = army?.units?.find(u => String(sidOf(u)) === sid);
     if (u) saveImg(u); else idb.set(sid, imgs.get(sid));
     stop(); render();
@@ -715,7 +773,7 @@ async function applyList(entry, fromNet) {
   $('url').value = entry.url || entry.id;
   ruleNames.clear(); wpnNames.clear(); names.clear(); facs.clear(); qty.clear(); imgs.clear();
   applyState(entry.state);
-  await resolveBookNames(army.units, army.gameSystem);
+  await resolveBookNames(army.units);
   const restored = await restoreImgs(army.units);
   const tag = fromNet ? 'Imported' : 'Restored';
   status(`${tag} “${army.name || listId}” · ${(army.units || []).length} units · ${army.listPoints ?? '?'} pts` +
