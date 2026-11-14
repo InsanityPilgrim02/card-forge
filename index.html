@@ -32,6 +32,22 @@ header input[type=text]{flex:1;min-width:240px;padding:8px 10px;border:1px solid
 #urlDrop b{font-weight:700;color:#fff}
 #urlDrop small{font-weight:500;color:var(--mute);font-size:11px}
 #urlDrop .muted{color:var(--mute);font-weight:600}
+#urlDrop .li{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+#urlDrop .li:last-of-type{border-bottom:0}
+#urlDrop .li-main{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;border:0;border-radius:0;background:transparent;color:#e8eaee;font-weight:600;cursor:pointer}
+#urlDrop .li-main:hover{background:var(--bench)}
+#urlDrop .li-x{flex:none;width:44px;border:0;border-radius:0;background:transparent;color:#ff7b7b;font-size:16px;font-weight:800;cursor:pointer}
+#urlDrop .li-x:hover{background:rgba(217,69,63,.25)}
+#urlDrop .li-clear{width:100%;border-bottom:0}
+.imgmenu{position:absolute;top:1mm;right:1mm;z-index:6;display:flex;flex-direction:column;gap:4px;background:rgba(0,0,0,.88);border-radius:5px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.imgmenu[hidden]{display:none!important}
+.imgmenu button{padding:6px 10px;font-size:11px;background:var(--amber);color:#111}
+.ucopies{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;width:100%;margin-bottom:4px}
+.ucopies button{padding:6px 12px;font-size:13px;background:var(--panel);color:#fff;border:1px solid var(--line)}
+.ucopies button.on{outline:2px solid var(--amber);background:#333}
+.ref .body{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.ref .top,.ref .rb{position:relative;z-index:1}
+.ref .rb{background:color-mix(in srgb, var(--cRefBody) 88%, transparent)}
 button{border:0;border-radius:4px;padding:8px 14px;font-weight:700;cursor:pointer;background:var(--amber);color:#111}
 button:disabled{opacity:.4;cursor:default}
 .wrap{max-width:1200px;margin:0 auto;padding:12px 16px}
@@ -341,9 +357,31 @@ function wpnDisp(label, aid) {
   return p.pre + (ov || p.name) + p.stats;
 }
 const armyKey = u => String(u.armyId || '_');
+function factionHint(units) {
+  const counts = new Map();
+  const tail = /((?:[A-Z][a-z]+\s+){0,4}(?:Brothers|Sisters|Hives|Raiders|Cults|Dynasty|Empire|Order|Legion|Guard|Swarm|Clans?|Tribes?|Drones|Robots?|Pirates?|Daemons?|Infected|Overlords|Marauders|Syndicate|Corporation|Collective|Watch|Host|Cabal|Prime\s+Brothers|Battle\s+Brothers))$/;
+  for (const u of units || []) {
+    const raw = String(u.genericName || u.name || u.customName || '').trim(); if (!raw) continue;
+    let key = (raw.match(tail) || [])[1];
+    if (!key) {
+      const parts = raw.split(/\s+/).filter(Boolean), take = [];
+      for (let i = parts.length - 1; i >= 0 && take.length < 3; i--) {
+        if (/^[A-Z]/.test(parts[i]) || /^(of|the|and)$/i.test(parts[i])) take.unshift(parts[i]); else break;
+      }
+      key = take.join(' ') || raw;
+    }
+    key = key.trim(); if (key) counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  let best = '', n = 0; for (const [k, c] of counts) if (c > n) { best = k; n = c; }
+  return best;
+}
 function factionOf(u) {
   if (facs.has(armyKey(u))) return facs.get(armyKey(u));
-  return (army.name || 'Faction').replace(/_/g, ' ').replace(/\s*[-–—]\s*\d+\s*k?\s*$/i, '').replace(/\s*\d+\s*pts?$/i, '').trim();
+  // Prefer real faction inferred from unit names for this armyId — not the list title
+  const same = (army?.units || []).filter(x => armyKey(x) === armyKey(u));
+  const hint = factionHint(same.length ? same : [u]);
+  if (hint) return hint;
+  return 'Faction';
 }
 const nameOf = u => names.get(sidOf(u)) || u.customName || u.name || u.genericName || 'Unit';
 
@@ -364,7 +402,13 @@ function cardHtml(u) {
         <div class="stats">${[['Quality', q], ['Defense', d], ['Tough', toughOf(u)]].map(([l, v]) =>
           `<div class="stat"><b>${l}</b><i>${esc(v)}</i></div>`).join('')}</div>
       </div>
-      <button class="tool" data-up>Image</button><input type="file" accept="image/*" data-file hidden>
+      <button class="tool" data-up>Image</button>
+      <div class="imgmenu" hidden>
+        <button type="button" data-gal>Library</button>
+        <button type="button" data-cam>Camera</button>
+      </div>
+      <input type="file" accept="image/*" data-file data-gal hidden>
+      <input type="file" accept="image/*" capture="environment" data-file data-cam hidden>
     </div></article>`;
 }
 function ctlHtml(u) {
@@ -391,9 +435,18 @@ function blocksOf(raw) {
 const entryHtml = e => `<div class="re"><b>${esc(e.name)}</b><p>${esc(e.desc || '—')}</p></div>`;
 
 // Fill a hidden, real-size card until it overflows, so text never clips
-function paginate(entries, title) {
+function paginate(entries, title, spells) {
   const probe = document.createElement('article');
   probe.className = 'card ref'; probe.style.cssText = 'position:absolute;left:-9999px;visibility:hidden';
+  // Spells only: cap type sizes so more fit per card (avoids one-spell-per-card blowouts)
+  if (spells) {
+    const rt = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rt')) || 2.8, 2.6);
+    const rn = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rn')) || 2.8, 2.4);
+    const rd = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rd')) || 2.6, 2.2);
+    probe.style.setProperty('--rt', rt + 'mm');
+    probe.style.setProperty('--rn', rn + 'mm');
+    probe.style.setProperty('--rd', rd + 'mm');
+  }
   probe.innerHTML = `<div class="top">${esc(title)}</div><div class="rb"></div>`;
   document.body.appendChild(probe);
   const body = probe.querySelector('.rb'), pages = [];
@@ -411,13 +464,38 @@ function refCards() {
   let html = '', n = 0;
   for (const [k, base] of REFS) {
     const blocks = k === 'core' ? [parseRules(refText.core)] : blocksOf(refText[k]);
+    const spells = k === 'spells';
     blocks.forEach((entries, bi) => {
       if (!entries.length) return;
-      const key = `${k}:${bi}`, title = refTitles.get(key) || (blocks.length > 1 ? `${base} ${bi + 1}` : base);
-      const pages = paginate(entries, title);
+      const key = `${k}:${bi}`, sid = 'ref:' + key, title = refTitles.get(key) || (blocks.length > 1 ? `${base} ${bi + 1}` : base);
+      const pages = paginate(entries, title, spells);
+      const im = imgs.get(sid), st = im ? im.t : null;
+      const style = (st ? `--o:${st.o / 100};--x:${st.x}%;--y:${st.y}%;--z:${st.z / 100};` : '') +
+        (spells ? `--rt:min(var(--rt),2.6mm);--rn:min(var(--rn),2.4mm);--rd:min(var(--rd),2.2mm);` : '');
+      // CSS min() in custom props may not work on all — set explicit if spells
+      const style2 = spells
+        ? (() => {
+            const rt = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rt')) || 2.8, 2.6);
+            const rn = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rn')) || 2.8, 2.4);
+            const rd = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rd')) || 2.6, 2.2);
+            return `--rt:${rt}mm;--rn:${rn}mm;--rd:${rd}mm;` + (st ? `--o:${st.o / 100};--x:${st.x}%;--y:${st.y}%;--z:${st.z / 100}` : '');
+          })()
+        : (st ? `--o:${st.o / 100};--x:${st.x}%;--y:${st.y}%;--z:${st.z / 100}` : '');
       pages.forEach((p, i) => {
         n++;
-        html += `<div class="shell"><article class="card ref" data-rk="${key}"><div class="top"><span class="ed" data-title="${key}" data-cur="${esc(title)}">${esc(title)}${pages.length > 1 ? ` (${i + 1}/${pages.length})` : ''}</span></div><div class="rb">${p.map(entryHtml).join('')}</div></article></div>`;
+        html += `<div class="shell"><article class="card ref" data-sid="${esc(sid)}" data-rk="${key}" style="${style2}">
+          <div class="body">
+            <div class="art" ${im ? '' : 'style="background-color:#d8d8d8"'}></div>${im ? `<img class="art" src="${im.src}" alt="" draggable="false">` : ''}
+            <div class="top"><span class="ed" data-title="${key}" data-cur="${esc(title)}">${esc(title)}${pages.length > 1 ? ` (${i + 1}/${pages.length})` : ''}</span></div>
+            <div class="rb">${p.map(entryHtml).join('')}</div>
+            <button class="tool" data-up>Image</button>
+            <div class="imgmenu" hidden>
+              <button type="button" data-gal>Library</button>
+              <button type="button" data-cam>Camera</button>
+            </div>
+            <input type="file" accept="image/*" data-file data-gal hidden>
+            <input type="file" accept="image/*" capture="environment" data-file data-cam hidden>
+          </div></article></div>`;
       });
     });
   }
@@ -445,7 +523,20 @@ const sidFrom = el => el.closest('[data-sid]').dataset.sid;
 
 $('grid').addEventListener('click', e => {
   const t = e.target;
-  if (t.dataset.up !== undefined) return t.nextElementSibling.click();
+  if (t.dataset.up !== undefined) {
+    e.stopPropagation();
+    document.querySelectorAll('.imgmenu').forEach(m => { if (m !== t.parentElement.querySelector('.imgmenu')) m.hidden = true; });
+    const m = t.parentElement.querySelector('.imgmenu'); if (m) m.hidden = !m.hidden;
+    return;
+  }
+  if (t.dataset.gal !== undefined) {
+    const inp = t.closest('.body, .card')?.querySelector('input[data-file][data-gal]'); if (inp) inp.click();
+    t.closest('.imgmenu').hidden = true; return;
+  }
+  if (t.dataset.cam !== undefined) {
+    const inp = t.closest('.body, .card')?.querySelector('input[data-file][data-cam]'); if (inp) inp.click();
+    t.closest('.imgmenu').hidden = true; return;
+  }
   const sid = (t.closest('[data-sid]') || t.closest('.shell')?.querySelector('[data-sid]'))?.dataset.sid, aid = t.closest('[data-aid]')?.dataset.aid;
   const rename = (map, orig, label) => {
     const k = aid + '::' + orig, v = ask(label + ' (this faction only; values in brackets stay fixed):', map.get(k) || orig);
@@ -470,21 +561,26 @@ $('grid').addEventListener('click', e => {
   }
 });
 $('grid').addEventListener('change', e => {
-  const t = e.target, el = t.closest('[data-sid]') || t.closest('.shell').querySelector('[data-sid]');
+  const t = e.target, el = t.closest('[data-sid]') || t.closest('.shell')?.querySelector('[data-sid]');
   if (!el) return;
-  const sid = el.dataset.sid, u = army.units.find(u => String(sidOf(u)) === sid), key = sidOf(u);
-  if (t.matches('[data-q]')) { qty.set(key, Math.max(1, Math.min(20, parseInt(t.value) || 1))); savePlaySoon(); render(); }
-  else if (t.matches('[data-tr]')) { saveImg(u); render(); }
+  const sid = el.dataset.sid, u = army?.units?.find(u => String(sidOf(u)) === sid), key = u ? sidOf(u) : sid;
+  if (t.matches('[data-q]') && u) { qty.set(key, Math.max(1, Math.min(20, parseInt(t.value) || 1))); savePlaySoon(); render(); }
+  else if (t.matches('[data-tr]')) { if (u) saveImg(u); else { const im = imgs.get(sid); if (im) idb.set(sid, im); } render(); }
   else if (t.matches('[data-file]') && t.files[0]) {
-    const fr = new FileReader();
-    fr.onload = () => { imgs.set(key, { src: fr.result, t: { o: 100, x: 0, y: 0, z: 100 } }); saveImg(u); render(); };
+    const fr = new FileReader(), sidKey = el.dataset.sid;
+    fr.onload = () => {
+      imgs.set(sidKey, { src: fr.result, t: { o: 100, x: 0, y: 0, z: 100 } });
+      if (u) saveImg(u); else idb.set(sidKey, imgs.get(sidKey));
+      render();
+    };
     fr.readAsDataURL(t.files[0]);
   }
 });
 $('grid').addEventListener('input', e => {
   const t = e.target; if (!t.matches('[data-tr]')) return;
-  const shell = t.closest('.shell'), card = shell.querySelector('.card'), u = army.units.find(u => String(sidOf(u)) === card.dataset.sid);
-  const im = imgs.get(sidOf(u)); im.t[t.dataset.tr] = Number(t.value);
+  const shell = t.closest('.shell'), card = shell.querySelector('.card'), sid = card.dataset.sid;
+  const u = army?.units?.find(u => String(sidOf(u)) === sid);
+  const im = imgs.get(u ? sidOf(u) : sid); if (!im) return; im.t[t.dataset.tr] = Number(t.value);
   const { o, x, y, z } = im.t;
   card.style.cssText = `--o:${o / 100};--x:${x}%;--y:${y}%;--z:${z / 100}`;
 });
@@ -524,10 +620,22 @@ $('url').addEventListener('click', () => showDrop());
 $('urlDrop').addEventListener('mousedown', e => e.preventDefault()); // keep focus while clicking
 $('urlDrop').addEventListener('click', async e => {
   const btn = e.target.closest('button'); if (!btn) return;
-  if (btn.dataset.clear) {
+  e.stopPropagation();
+  if (btn.hasAttribute('data-clear')) {
     const idx = await listIndex();
-    for (const e of idx) await idb.del(listKey(e.id));
-    await idb.set('__lists', []); hideDrop(); return status('Cleared saved lists.', 'ok');
+    for (const x of idx) await idb.del(listKey(x.id));
+    await idb.set('__lists', []);
+    hideDrop();
+    status('Cleared saved lists.', 'ok');
+    return;
+  }
+  if (btn.dataset.del) {
+    const id = btn.dataset.del;
+    await idb.del(listKey(id));
+    await idb.set('__lists', (await listIndex()).filter(x => x.id !== id));
+    await showDrop();
+    status('Removed saved list.', 'ok');
+    return;
   }
   const id = btn.dataset.lid; if (!id) return;
   const entry = await idb.get(listKey(id));
@@ -537,7 +645,11 @@ $('urlDrop').addEventListener('click', async e => {
   try { await applyList(entry, false); } catch (err) { status(err.message, 'err'); }
   $('load').disabled = false;
 });
-document.addEventListener('click', e => { if (!e.target.closest('.urlwrap')) hideDrop(); });
+document.addEventListener('click', e => {
+  if (!e.target.closest('.urlwrap')) hideDrop();
+  if (!e.target.closest('.imgmenu') && e.target.dataset.up === undefined)
+    document.querySelectorAll('.imgmenu').forEach(m => { m.hidden = true; });
+});
 $('print').onclick = () => print();
 
 // ---------- play mode: one big card, swipe/arrows/contents, per-model toughness, destroy, rule popups ----------
@@ -585,9 +697,10 @@ async function showDrop() {
   const idx = await listIndex(), box = $('urlDrop');
   if (!idx.length) { box.hidden = true; box.innerHTML = ''; return; }
   box.innerHTML = idx.map(e =>
-    `<button type="button" data-lid="${esc(e.id)}"><b>${esc(e.name || e.id)}</b>` +
-    `<small>${e.pts != null ? e.pts + ' pts · ' : ''}${new Date(e.savedAt).toLocaleString()}</small></button>`
-  ).join('') + `<button type="button" data-clear class="muted">Clear saved lists</button>`;
+    `<div class="li"><button type="button" class="li-main" data-lid="${esc(e.id)}"><b>${esc(e.name || e.id)}</b>` +
+    `<small>${e.pts != null ? e.pts + ' pts · ' : ''}${new Date(e.savedAt).toLocaleString()}</small></button>` +
+    `<button type="button" class="li-x" data-del="${esc(e.id)}" title="Remove saved list">✕</button></div>`
+  ).join('') + `<button type="button" class="muted li-clear" data-clear="1">Clear saved lists</button>`;
   box.hidden = false;
 }
 function hideDrop() { $('urlDrop').hidden = true; }
@@ -605,7 +718,9 @@ function openPlay() {
     const q = ref ? 1 : Math.max(1, Number(c.dataset.qty) || 1);   // Play qty: each copy is its own tracked card
     const label = (c.querySelector('.nm .ed') || c.querySelector('.top .ed'))?.textContent || 'Card';
     return Array.from({ length: q }, (_, i) => ({ el: c, ref, caster, rk: c.dataset.rk || '', title: c.querySelector('[data-cur]')?.dataset.cur || '',
-      aid: c.dataset.aid || '', fac: c.querySelector('.fac')?.textContent || '', sid: ref ? null : `${c.dataset.sid}#${i}`, n: ref ? 0 : Number(c.dataset.n) || 1, max: ref ? 0 : Number(c.dataset.t) || 0,   // 0 = no Tough, nothing to track
+      aid: c.dataset.aid || '', fac: c.querySelector('.fac')?.textContent || '',
+      baseSid: c.dataset.sid || '', copy: i + 1, copies: q,
+      sid: ref ? null : `${c.dataset.sid}#${i}`, n: ref ? 0 : Number(c.dataset.n) || 1, max: ref ? 0 : Number(c.dataset.t) || 0,
       name: q > 1 ? `${label} (${i + 1}/${q})` : label }));
   });
   if (!play.list.length) return;
@@ -692,8 +807,13 @@ function renderTrack() {
   const spells = it.caster && blocks.length
     ? `<div class="pspells"><button data-a="spells">✦ Spells</button>${blocks.length > 1 ? '<button data-a="chg" title="Choose a different spell list">⇄</button>' : ''}</div>`
     : '';
-  // Destroy stays centered; Spells sit in the right column so they never shift it
-  t.innerHTML = `<div class="pwounds">${head}${rows ? `<div class="mdls">${rows}</div>` : ''}</div>
+  const sibs = !it.ref && it.copies > 1
+    ? play.list.map((x, k) => ({ x, k })).filter(o => o.x.baseSid === it.baseSid)
+    : [];
+  const unitNav = sibs.length > 1
+    ? `<div class="ucopies">${sibs.map(o => `<button type="button" data-a="copy" data-i="${o.k}" class="${o.k === play.i ? 'on' : ''}">Unit ${o.x.copy}</button>`).join('')}</div>`
+    : '';
+  t.innerHTML = `<div class="pwounds">${unitNav}${head}${rows ? `<div class="mdls">${rows}</div>` : ''}</div>
     <div class="pbot"><button data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore unit' : 'Destroy unit'}</button>${spells}</div>`;
   const ml = t.querySelector('.mdls'); if (ml) ml.scrollTop = keep;
 }
@@ -747,6 +867,7 @@ $('pTrack').onclick = e => {
   const btn = e.target.closest('[data-a]'), it = play.list[play.i]; if (!btn || !it) return;
   const a = btn.dataset.a;
   if (a === 'back') { if (play.back != null) play.i = play.back; play.back = null; return showPlay(); }
+  if (a === 'copy') { play.i = +btn.dataset.i; return showPlay(); }
   if (it.ref) return;
   if (a === 'spells') { const pk = pickBlock(it, spellBlocks()); if (pk) return openSpell(pk); play.pick = true; return renderTrack(); }
   if (a === 'chg') { play.pick = true; return renderTrack(); }
@@ -834,6 +955,10 @@ const qid = new URLSearchParams(location.search).get('id');
     for (const [k] of REFS) refText[k] = rec[k] || '';
     document.querySelectorAll('[data-ref]').forEach(ta => { ta.value = refText[ta.dataset.ref]; });
     (rec.titles || []).forEach(([k, v]) => refTitles.set(k, v)); (rec.smap || []).forEach(([k, v]) => spellMap.set(k, v));
+  }
+  for (const [k] of REFS) for (let bi = 0; bi < 24; bi++) {
+    const key = `ref:${k}:${bi}`, rec2 = await idb.get(key);
+    if (rec2?.src) imgs.set(key, { src: rec2.src, t: { o: 100, x: 0, y: 0, z: 100, ...(rec2.t || {}) } });
   }
   if (qid) { $('url').value = qid; load(); } else render();
 })();
