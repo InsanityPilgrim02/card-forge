@@ -184,21 +184,22 @@ button{touch-action:manipulation}
 </header>
 <div id="qrModal" hidden>
   <div class="box">
-    <h2>List QR</h2>
-    <p class="hint">Exports share id, play state, and reference text (core / faction rules / spells). Images stay on this device. Import re-fetches the list from Army Forge.</p>
+    <h2>QR transfer</h2>
+    <p class="hint">List QR = share id + play state (small). Rules QR = core / faction / spells text (separate). Scan or paste either. Images stay on this device.</p>
     <div id="qrExport">
       <img id="qrImg" alt="QR code" hidden>
-      <p class="hint" id="qrExportMsg">Load a list to export.</p>
+      <p class="hint" id="qrExportMsg">Choose an export below, or scan/paste to import.</p>
       <textarea id="qrText" readonly hidden></textarea>
     </div>
     <div class="row">
-      <button type="button" id="qrMake">Show export QR</button>
-      <button type="button" id="qrScan">Scan QR</button>
-      <button type="button" id="qrPaste">Import pasted code</button>
+      <button type="button" id="qrMake">List QR</button>
+      <button type="button" id="qrMakeRef">Rules QR</button>
+      <button type="button" id="qrScan">Scan</button>
+      <button type="button" id="qrPaste">Import paste</button>
       <button type="button" id="qrClose">Close</button>
     </div>
     <video id="qrVideo" playsinline muted hidden></video>
-    <textarea id="qrIn" placeholder="Paste CF1:… code here" hidden></textarea>
+    <textarea id="qrIn" placeholder="Paste CF1:… or CFR1:… code here" hidden></textarea>
   </div>
 </div>
 <div class="wrap">
@@ -733,13 +734,16 @@ $('load').onclick = load;
 $('qrBtn').onclick = openQrModal;
 $('qrClose').onclick = closeQrModal;
 $('qrMake').onclick = () => showExportQr().catch(err => status(err.message, 'err'));
+$('qrMakeRef').onclick = () => showExportRefQr().catch(err => status(err.message, 'err'));
 $('qrScan').onclick = () => scanQrCamera().catch(err => status(err.message, 'err'));
 $('qrPaste').onclick = async () => {
   $('qrIn').hidden = false;
   const t = $('qrIn').value.trim() || $('qrText').value.trim();
-  if (!t) return status('Paste a CF1: code into the box, then tap Import pasted code again.', 'err');
-  try { await importQrData(await unpackQrPayload(t)); }
-  catch (err) { status(err.message, 'err'); }
+  if (!t) return status('Paste a CF1:/CFR1: code, then tap Import paste again.', 'err');
+  try {
+    const parsed = await unpackAnyQr(t);
+    await importQrData(parsed.kind, parsed.data);
+  } catch (err) { status(err.message, 'err'); }
 };
 $('qrModal').addEventListener('click', e => { if (e.target.id === 'qrModal') closeQrModal(); });
 $('url').addEventListener('keydown', e => { if (e.key === 'Enter') load(); if (e.key === 'Escape') hideDrop(); });
@@ -822,43 +826,54 @@ async function applyList(entry, fromNet) {
     (entry.state && ((entry.state.wounds || []).length || (entry.state.dead || []).length) ? ' · play state restored' : ''), 'ok');
   await persistList(); render();
 }
-async function packQrPayload() {
-  if (!listId || !army) return null;
-  const payload = {
-    v: 2, id: listId, n: army.name || listId, s: snapState(),
-    r: { core: refText.core || '', faction: refText.faction || '', spells: refText.spells || '',
-      titles: [...refTitles], smap: [...spellMap] }
-  };
-  const json = JSON.stringify(payload);
-  // Prefer gzip so core/faction/spell text can fit; CF2: = gzip, CF1: = plain (old readers)
+async function encodePayload(prefix, plainPrefix, obj) {
+  const json = JSON.stringify(obj);
   if (window.CompressionStream) {
     const buf = new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
     let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-    return 'CF2:' + btoa(bin);
+    return prefix + btoa(bin);
   }
-  return 'CF1:' + btoa(unescape(encodeURIComponent(json)));
+  return plainPrefix + btoa(unescape(encodeURIComponent(json)));
 }
-async function unpackQrPayload(text) {
+async function decodePayload(text, gzPrefix, plainPrefix) {
   const t = String(text || '').trim();
-  let i = t.indexOf('CF2:');
+  let i = t.indexOf(gzPrefix);
   if (i >= 0) {
-    const raw = t.slice(i + 4).replace(/\s+/g, '');
+    const raw = t.slice(i + gzPrefix.length).replace(/\s+/g, '');
     const bin = atob(raw);
     const bytes = new Uint8Array(bin.length);
     for (let j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
     if (!window.DecompressionStream) throw new Error('This browser can’t decode compressed QR data.');
-    const json = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
-    const data = JSON.parse(json);
-    if (!data || !data.id) throw new Error('QR payload has no list id.');
-    return data;
+    return JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
   }
-  i = t.indexOf('CF1:');
-  if (i < 0) throw new Error('Not a Card Forge list QR (need CF1: or CF2: prefix).');
-  const raw = t.slice(i + 4).replace(/\s+/g, '');
-  const json = decodeURIComponent(escape(atob(raw)));
-  const data = JSON.parse(json);
-  if (!data || !data.id) throw new Error('QR payload has no list id.');
-  return data;
+  i = t.indexOf(plainPrefix);
+  if (i < 0) return null;
+  const raw = t.slice(i + plainPrefix.length).replace(/\s+/g, '');
+  return JSON.parse(decodeURIComponent(escape(atob(raw))));
+}
+async function packListQr() {
+  if (!listId || !army) return null;
+  return encodePayload('CF2:', 'CF1:', { v: 1, id: listId, n: army.name || listId, s: snapState() });
+}
+async function packRefQr() {
+  const r = { core: refText.core || '', faction: refText.faction || '', spells: refText.spells || '',
+    titles: [...refTitles], smap: [...spellMap] };
+  if (!r.core && !r.faction && !r.spells) return null;
+  return encodePayload('CFR2:', 'CFR1:', { v: 1, r });
+}
+async function unpackAnyQr(text) {
+  const t = String(text || '').trim();
+  if (t.includes('CFR2:') || t.includes('CFR1:')) {
+    const data = await decodePayload(t, 'CFR2:', 'CFR1:');
+    if (!data || !data.r) throw new Error('Rules QR has no reference text.');
+    return { kind: 'ref', data };
+  }
+  if (t.includes('CF2:') || t.includes('CF1:')) {
+    const data = await decodePayload(t, 'CF2:', 'CF1:');
+    if (!data || !data.id) throw new Error('List QR has no list id.');
+    return { kind: 'list', data };
+  }
+  throw new Error('Not a Card Forge QR (need CF1:/CF2: list or CFR1:/CFR2: rules).');
 }
 let qrStream = null;
 function stopQrScan() {
@@ -869,7 +884,7 @@ function openQrModal() {
   stopQrScan();
   $('qrIn').hidden = true; $('qrText').hidden = true; $('qrImg').hidden = true;
   $('qrExportMsg').hidden = false;
-  $('qrExportMsg').textContent = army && listId ? 'Tap “Show export QR” to share play state + reference text.' : 'Load a list to export, or scan/paste to import.';
+  $('qrExportMsg').textContent = 'List QR = army play state. Rules QR = reference text. Scan/paste accepts either.';
   $('qrModal').hidden = false;
 }
 function closeQrModal() { stopQrScan(); $('qrModal').hidden = true; }
@@ -883,21 +898,35 @@ function applyRefFromQr(r) {
   document.querySelectorAll('[data-ref]').forEach(ta => { ta.value = refText[ta.dataset.ref] || ''; });
   saveText();
 }
-async function showExportQr() {
-  const code = await packQrPayload();
-  if (!code) return status('Load a list before exporting a QR.', 'err');
+function showQrCode(code) {
   $('qrExportMsg').hidden = true;
   $('qrText').value = code; $('qrText').hidden = false;
   if (code.length > 2200) {
     $('qrImg').hidden = true;
-    status('Code is large — use copy/paste of the text (QR may not scan reliably).', 'err');
+    status('Code is large — copy/paste the text (QR may not scan reliably).', 'err');
     return;
   }
   const img = $('qrImg');
   img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&ecc=L&data=' + encodeURIComponent(code);
   img.hidden = false;
 }
-async function importQrData(data) {
+async function showExportQr() {
+  const code = await packListQr();
+  if (!code) return status('Load a list before exporting a List QR.', 'err');
+  showQrCode(code);
+}
+async function showExportRefQr() {
+  const code = await packRefQr();
+  if (!code) return status('Paste some reference rules/spells first.', 'err');
+  showQrCode(code);
+}
+async function importQrData(kind, data) {
+  if (kind === 'ref') {
+    applyRefFromQr(data.r);
+    closeQrModal();
+    render();
+    return status('Imported reference text from QR.', 'ok');
+  }
   closeQrModal();
   status('Importing list from QR…');
   $('load').disabled = true;
@@ -906,7 +935,7 @@ async function importQrData(data) {
     if (!res.ok) throw new Error(`Couldn’t load list (${res.status}).`);
     const armyData = await res.json();
     if (!Array.isArray(armyData.units)) throw new Error('Unexpected list data from Army Forge.');
-    applyRefFromQr(data.r);
+    // ignore any legacy data.r on old list QRs — rules are a separate export now
     await applyList({ id: data.id, url: data.id, name: data.n || armyData.name || data.id,
       pts: armyData.listPoints, army: armyData, state: data.s || { wounds: [], dead: [], playI: 0 } }, false);
   } catch (err) {
@@ -929,15 +958,15 @@ async function scanQrCamera() {
       try {
         const codes = await det.detect(video);
         if (codes && codes[0]?.rawValue) {
-          const data = await unpackQrPayload(codes[0].rawValue);
-          return importQrData(data);
+          const parsed = await unpackAnyQr(codes[0].rawValue);
+          return importQrData(parsed.kind, parsed.data);
         }
       } catch (_) {}
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   } else {
-    status('Live scan needs Chrome/Edge. Paste the CF1: code instead.', 'err');
+    status('Live scan needs Chrome/Edge. Paste the code instead.', 'err');
     $('qrIn').hidden = false;
   }
 }
