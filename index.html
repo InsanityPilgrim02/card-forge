@@ -50,15 +50,6 @@ header input[type=text]{flex:1;min-width:240px;padding:8px 10px;border:1px solid
 .cambar button{padding:8px 14px;font-size:12px}
 .cambar .danger{background:#d9453f;color:#fff}
 .card.cam-on .tool,.card.cam-on .imgmenu{display:none!important}
-#qrModal{position:fixed;inset:0;z-index:180;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
-#qrModal[hidden]{display:none!important}
-#qrModal .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;max-width:360px;width:100%;color:#e8eaee}
-#qrModal h2{margin:0 0 8px;font:800 14px/1.2 system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
-#qrModal .hint{font-size:12px;color:var(--mute);margin:0 0 10px}
-#qrModal img{display:block;width:240px;height:240px;margin:8px auto;background:#fff;border-radius:6px}
-#qrModal .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
-#qrModal textarea{width:100%;min-height:64px;margin-top:6px;padding:8px;background:var(--ink);color:#fff;border:1px solid var(--line);border-radius:4px;font:11px/1.3 ui-monospace,Consolas,monospace}
-#qrModal video{width:100%;max-height:220px;background:#000;border-radius:6px;object-fit:cover}
 .ref .body{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
 .ref .top,.ref .rb{position:relative;z-index:1}
 .ref .rb{background:color-mix(in srgb, var(--cRefBody) 88%, transparent)}
@@ -113,9 +104,10 @@ textarea{width:100%;min-height:80px;margin-top:6px;padding:8px;background:var(--
 
 body.bordered .card{border:var(--bw) solid #000}
 /* reference cards */
-.ref .top{flex:none;justify-content:center;min-height:0;margin:1.5mm 1.8mm 0;padding:.9mm 2.2mm;background:var(--cRefTopBg);color:var(--cRefTopFg);border:.25mm solid var(--cRefTopBg);border-radius:3mm;font-size:var(--rt);line-height:1.2}
-.ref .rb{margin-top:1.2mm}
-.rb{flex:1;min-height:0;overflow:hidden;padding:.6mm 1.3mm .8mm;display:flex;flex-direction:column;gap:.28mm;background:var(--cRefBody)}
+.ref .top{flex:none;justify-content:center;align-items:center;min-height:7.5mm;margin:0;padding:1.6mm 2.2mm;width:100%;box-sizing:border-box;background:var(--cRefTopBg)!important;color:var(--cRefTopFg);border:0;border-radius:0;font-size:var(--rt);line-height:1.2;font-weight:700;position:relative;z-index:2}
+.ref .rb{margin-top:0;position:relative;z-index:2}
+.rb{flex:1;min-height:0;overflow:hidden;padding:.8mm 1.3mm 1mm;display:flex;flex-direction:column;gap:.28mm;background:var(--cRefBody)}
+.ref .body > .art{z-index:0}
 .re{flex:none;border-bottom:.1mm solid #e4e4e4;padding-bottom:.2mm}.re:last-child{border:0}
 .re b{display:block;font-size:var(--rn);font-weight:800;line-height:1.08;color:var(--cRefName)}
 .re p{margin:.05mm 0 0;font-size:var(--rd);line-height:1.12;color:var(--cRefDesc)}
@@ -138,6 +130,15 @@ button{touch-action:manipulation}
 #pTrack .pwounds{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;flex:1;min-height:0;overflow:auto;justify-content:center}
 #pTrack .pbot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px 14px;width:100%;flex:none}
 #pTrack .pbot>[data-a=destroy]{grid-column:2;justify-self:center}
+#pTrack .pbot>.pdice{grid-column:1;justify-self:end;display:flex;gap:8px;align-items:center}
+#pTrack .diceui{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;padding:4px 0;color:#e8eaee;font-size:14px}
+#pTrack .diceui .drow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:center}
+#pTrack .diceui label{color:var(--mute);font-size:12px}
+#pTrack .diceui input[type=number]{width:3.6em;padding:6px 8px;background:var(--panel);color:#fff;border:1px solid var(--line);border-radius:4px}
+#pTrack .diceui select{padding:6px 8px;background:var(--panel);color:#fff;border:1px solid var(--line);border-radius:4px}
+#pTrack .diceui .dres{text-align:center;line-height:1.35}
+#pTrack .diceui .dres b{color:var(--amber)}
+#pTrack .diceui .drolls{font-size:12px;color:var(--mute);max-width:100%;word-break:break-word}
 #pTrack .pbot>.pspells{grid-column:3;justify-self:start;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
 #pTrack button{padding:12px 16px;font-size:15px}
 #pTrack .danger,.danger{background:#d9453f;color:#fff}
@@ -177,31 +178,10 @@ button{touch-action:manipulation}
     <div id="urlDrop" hidden></div>
   </div>
   <button id="load">Import</button>
-  <button id="qrBtn" type="button" title="QR import / export saved list">QR</button>
   <button id="playBtn" disabled>▶ Play</button>
   <button id="export" disabled>Export PNGs</button>
   <button id="print" disabled>Print</button>
 </header>
-<div id="qrModal" hidden>
-  <div class="box">
-    <h2>QR transfer</h2>
-    <p class="hint">List QR = share id + play state (small). Rules QR = core / faction / spells text (separate). Scan or paste either. Images stay on this device.</p>
-    <div id="qrExport">
-      <img id="qrImg" alt="QR code" hidden>
-      <p class="hint" id="qrExportMsg">Choose an export below, or scan/paste to import.</p>
-      <textarea id="qrText" readonly hidden></textarea>
-    </div>
-    <div class="row">
-      <button type="button" id="qrMake">List QR</button>
-      <button type="button" id="qrMakeRef">Rules QR</button>
-      <button type="button" id="qrScan">Scan</button>
-      <button type="button" id="qrPaste">Import paste</button>
-      <button type="button" id="qrClose">Close</button>
-    </div>
-    <video id="qrVideo" playsinline muted hidden></video>
-    <textarea id="qrIn" placeholder="Paste CF1:… or CFR1:… code here" hidden></textarea>
-  </div>
-</div>
 <div class="wrap">
   <div id="status"></div>
   <details><summary>Layout &amp; sizes</summary><div>
@@ -731,21 +711,6 @@ async function load() {
   $('load').disabled = false;
 }
 $('load').onclick = load;
-$('qrBtn').onclick = openQrModal;
-$('qrClose').onclick = closeQrModal;
-$('qrMake').onclick = () => showExportQr().catch(err => status(err.message, 'err'));
-$('qrMakeRef').onclick = () => showExportRefQr().catch(err => status(err.message, 'err'));
-$('qrScan').onclick = () => scanQrCamera().catch(err => status(err.message, 'err'));
-$('qrPaste').onclick = async () => {
-  $('qrIn').hidden = false;
-  const t = $('qrIn').value.trim() || $('qrText').value.trim();
-  if (!t) return status('Paste a CF1:/CFR1: code, then tap Import paste again.', 'err');
-  try {
-    const parsed = await unpackAnyQr(t);
-    await importQrData(parsed.kind, parsed.data);
-  } catch (err) { status(err.message, 'err'); }
-};
-$('qrModal').addEventListener('click', e => { if (e.target.id === 'qrModal') closeQrModal(); });
 $('url').addEventListener('keydown', e => { if (e.key === 'Enter') load(); if (e.key === 'Escape') hideDrop(); });
 $('url').addEventListener('focus', () => showDrop());
 $('url').addEventListener('click', () => showDrop());
@@ -785,7 +750,7 @@ document.addEventListener('click', e => {
 $('print').onclick = () => print();
 
 // ---------- play mode: one big card, swipe/arrows/contents, per-model toughness, destroy, rule popups ----------
-const play = { on: false, i: 0, list: [], wounds: new Map(), dead: new Set(), lookup: new Map(), refOpen: false, back: null, pick: false };
+const play = { on: false, i: 0, list: [], wounds: new Map(), dead: new Set(), lookup: new Map(), refOpen: false, back: null, pick: false, dice: null };
 const snapState = () => ({
   wounds: [...play.wounds.entries()], dead: [...play.dead], playI: play.i,
   names: [...names], facs: [...facs], qty: [...qty], ruleNames: [...ruleNames], wpnNames: [...wpnNames],
@@ -826,150 +791,6 @@ async function applyList(entry, fromNet) {
     (entry.state && ((entry.state.wounds || []).length || (entry.state.dead || []).length) ? ' · play state restored' : ''), 'ok');
   await persistList(); render();
 }
-async function encodePayload(prefix, plainPrefix, obj) {
-  const json = JSON.stringify(obj);
-  if (window.CompressionStream) {
-    const buf = new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
-    let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-    return prefix + btoa(bin);
-  }
-  return plainPrefix + btoa(unescape(encodeURIComponent(json)));
-}
-async function decodePayload(text, gzPrefix, plainPrefix) {
-  const t = String(text || '').trim();
-  let i = t.indexOf(gzPrefix);
-  if (i >= 0) {
-    const raw = t.slice(i + gzPrefix.length).replace(/\s+/g, '');
-    const bin = atob(raw);
-    const bytes = new Uint8Array(bin.length);
-    for (let j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
-    if (!window.DecompressionStream) throw new Error('This browser can’t decode compressed QR data.');
-    return JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
-  }
-  i = t.indexOf(plainPrefix);
-  if (i < 0) return null;
-  const raw = t.slice(i + plainPrefix.length).replace(/\s+/g, '');
-  return JSON.parse(decodeURIComponent(escape(atob(raw))));
-}
-async function packListQr() {
-  if (!listId || !army) return null;
-  return encodePayload('CF2:', 'CF1:', { v: 1, id: listId, n: army.name || listId, s: snapState() });
-}
-async function packRefQr() {
-  const r = { core: refText.core || '', faction: refText.faction || '', spells: refText.spells || '',
-    titles: [...refTitles], smap: [...spellMap] };
-  if (!r.core && !r.faction && !r.spells) return null;
-  return encodePayload('CFR2:', 'CFR1:', { v: 1, r });
-}
-async function unpackAnyQr(text) {
-  const t = String(text || '').trim();
-  if (t.includes('CFR2:') || t.includes('CFR1:')) {
-    const data = await decodePayload(t, 'CFR2:', 'CFR1:');
-    if (!data || !data.r) throw new Error('Rules QR has no reference text.');
-    return { kind: 'ref', data };
-  }
-  if (t.includes('CF2:') || t.includes('CF1:')) {
-    const data = await decodePayload(t, 'CF2:', 'CF1:');
-    if (!data || !data.id) throw new Error('List QR has no list id.');
-    return { kind: 'list', data };
-  }
-  throw new Error('Not a Card Forge QR (need CF1:/CF2: list or CFR1:/CFR2: rules).');
-}
-let qrStream = null;
-function stopQrScan() {
-  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
-  const v = $('qrVideo'); if (v) { v.srcObject = null; v.hidden = true; }
-}
-function openQrModal() {
-  stopQrScan();
-  $('qrIn').hidden = true; $('qrText').hidden = true; $('qrImg').hidden = true;
-  $('qrExportMsg').hidden = false;
-  $('qrExportMsg').textContent = 'List QR = army play state. Rules QR = reference text. Scan/paste accepts either.';
-  $('qrModal').hidden = false;
-}
-function closeQrModal() { stopQrScan(); $('qrModal').hidden = true; }
-function applyRefFromQr(r) {
-  if (!r) return;
-  if (r.core != null) refText.core = r.core;
-  if (r.faction != null) refText.faction = r.faction;
-  if (r.spells != null) refText.spells = r.spells;
-  if (r.titles) { refTitles.clear(); r.titles.forEach(([k, v]) => refTitles.set(k, v)); }
-  if (r.smap) { spellMap.clear(); r.smap.forEach(([k, v]) => spellMap.set(k, v)); }
-  document.querySelectorAll('[data-ref]').forEach(ta => { ta.value = refText[ta.dataset.ref] || ''; });
-  saveText();
-}
-function showQrCode(code) {
-  $('qrExportMsg').hidden = true;
-  $('qrText').value = code; $('qrText').hidden = false;
-  if (code.length > 2200) {
-    $('qrImg').hidden = true;
-    status('Code is large — copy/paste the text (QR may not scan reliably).', 'err');
-    return;
-  }
-  const img = $('qrImg');
-  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&ecc=L&data=' + encodeURIComponent(code);
-  img.hidden = false;
-}
-async function showExportQr() {
-  const code = await packListQr();
-  if (!code) return status('Load a list before exporting a List QR.', 'err');
-  showQrCode(code);
-}
-async function showExportRefQr() {
-  const code = await packRefQr();
-  if (!code) return status('Paste some reference rules/spells first.', 'err');
-  showQrCode(code);
-}
-async function importQrData(kind, data) {
-  if (kind === 'ref') {
-    applyRefFromQr(data.r);
-    closeQrModal();
-    render();
-    return status('Imported reference text from QR.', 'ok');
-  }
-  closeQrModal();
-  status('Importing list from QR…');
-  $('load').disabled = true;
-  try {
-    const res = await fetch(`${API}?id=${encodeURIComponent(data.id)}`);
-    if (!res.ok) throw new Error(`Couldn’t load list (${res.status}).`);
-    const armyData = await res.json();
-    if (!Array.isArray(armyData.units)) throw new Error('Unexpected list data from Army Forge.');
-    // ignore any legacy data.r on old list QRs — rules are a separate export now
-    await applyList({ id: data.id, url: data.id, name: data.n || armyData.name || data.id,
-      pts: armyData.listPoints, army: armyData, state: data.s || { wounds: [], dead: [], playI: 0 } }, false);
-  } catch (err) {
-    status(err.message.startsWith('Failed') ? 'Network error contacting Army Forge.' : err.message, 'err');
-  }
-  $('load').disabled = false;
-}
-async function scanQrCamera() {
-  if (!navigator.mediaDevices?.getUserMedia) return status('Camera not available.', 'err');
-  stopQrScan();
-  $('qrIn').hidden = true;
-  try {
-    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-  } catch (_) { return status('Camera permission denied.', 'err'); }
-  const video = $('qrVideo'); video.hidden = false; video.srcObject = qrStream; await video.play().catch(() => {});
-  if (window.BarcodeDetector) {
-    const det = new BarcodeDetector({ formats: ['qr_code'] });
-    const tick = async () => {
-      if (!qrStream) return;
-      try {
-        const codes = await det.detect(video);
-        if (codes && codes[0]?.rawValue) {
-          const parsed = await unpackAnyQr(codes[0].rawValue);
-          return importQrData(parsed.kind, parsed.data);
-        }
-      } catch (_) {}
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  } else {
-    status('Live scan needs Chrome/Edge. Paste the code instead.', 'err');
-    $('qrIn').hidden = false;
-  }
-}
 async function showDrop() {
   const idx = await listIndex(), box = $('urlDrop');
   if (!idx.length) { box.hidden = true; box.innerHTML = ''; return; }
@@ -1008,7 +829,7 @@ function openPlay() {
   showPlay();
 }
 function closePlay() {
-  play.on = false; play.back = null; hideTip(); $('play').hidden = true; document.body.style.overflow = '';
+  play.on = false; play.back = null; play.dice = null; hideTip(); $('play').hidden = true; document.body.style.overflow = '';
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 }
 // make rules with a known description tappable/hoverable (unit rule chips and weapon special rules)
@@ -1091,6 +912,24 @@ function renderTrack() {
     }).join('');
     head = `<b class="${aliveOf(it) < 1 ? 'out' : ''}">Models ${aliveOf(it)} / ${it.n} · Tough ${it.max} each</b>`;
   }
+  if (play.dice) {
+    const d = play.dice;
+    const res = d.last ? `<div class="dres"><b>${d.last.pass}</b> success${d.last.pass === 1 ? '' : 'es'} on ${d.n}d6 · ${d.target}+<br>
+      <span>1s: <b>${d.last.ones}</b> · 6s: <b>${d.last.sixes}</b></span>
+      <div class="drolls">[${d.last.rolls.join(', ')}]</div></div>` : '<span class="pmute">Set dice &amp; target, then Roll</span>';
+    t.innerHTML = `<div class="pwounds"><div class="diceui">
+      <div class="drow">
+        <label>Dice <input type="number" min="1" max="40" value="${d.n}" data-dn></label>
+        <label>Pass on <select data-dt>${[2,3,4,5,6].map(n => `<option value="${n}"${n===d.target?' selected':''}>${n}+</option>`).join('')}</select></label>
+        <button type="button" data-a="roll">Roll</button>
+        <button type="button" data-a="dice-close">Back</button>
+      </div>
+      ${res}
+    </div></div>
+    <div class="pbot"><div class="pdice"><button type="button" data-a="dice">Dice</button></div>
+      <button data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore unit' : 'Destroy unit'}</button>${''}</div>`;
+    return;
+  }
   const spells = it.caster && blocks.length
     ? `<div class="pspells"><button data-a="spells">✦ Spells</button>${blocks.length > 1 ? '<button data-a="chg" title="Choose a different spell list">⇄</button>' : ''}</div>`
     : '';
@@ -1100,10 +939,12 @@ function renderTrack() {
   const unitNav = sibs.length > 1
     ? `<div class="ucopies">${sibs.map(o => `<button type="button" data-a="copy" data-i="${o.k}" class="${o.k === play.i ? 'on' : ''}">Unit ${o.x.copy}</button>`).join('')}</div>`
     : '';
+  const diceBtn = it.ref ? '' : `<div class="pdice"><button type="button" data-a="dice">Dice</button></div>`;
   t.innerHTML = `<div class="pwounds">${unitNav}${head}${rows ? `<div class="mdls">${rows}</div>` : ''}</div>
-    <div class="pbot"><button data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore unit' : 'Destroy unit'}</button>${spells}</div>`;
+    <div class="pbot">${diceBtn}<button data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore unit' : 'Destroy unit'}</button>${spells}</div>`;
   const ml = t.querySelector('.mdls'); if (ml) ml.scrollTop = keep;
 }
+
 function renderToc() {
   let nu = 0, nr = 0;
   const row = (it, k) => {
@@ -1162,6 +1003,21 @@ $('pTrack').onclick = e => {
   const a = btn.dataset.a;
   if (a === 'back') { if (play.back != null) play.i = play.back; play.back = null; return showPlay(); }
   if (a === 'copy') { play.i = +btn.dataset.i; return showPlay(); }
+  if (a === 'dice') { play.dice = play.dice || { n: 1, target: 4, last: null }; return renderTrack(); }
+  if (a === 'dice-close') { play.dice = null; return renderTrack(); }
+  if (a === 'roll') {
+    const d = play.dice || { n: 1, target: 4 };
+    const n = Math.max(1, Math.min(40, Number(d.n) || 1));
+    const target = Math.max(2, Math.min(6, Number(d.target) || 4));
+    const rolls = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6));
+    d.n = n; d.target = target;
+    d.last = {
+      rolls, pass: rolls.filter(r => r >= target).length,
+      ones: rolls.filter(r => r === 1).length,
+      sixes: rolls.filter(r => r === 6).length
+    };
+    play.dice = d; return renderTrack();
+  }
   if (it.ref) return;
   if (a === 'spells') { const pk = pickBlock(it, spellBlocks()); if (pk) return openSpell(pk); play.pick = true; return renderTrack(); }
   if (a === 'chg') { play.pick = true; return renderTrack(); }
@@ -1172,6 +1028,11 @@ $('pTrack').onclick = e => {
   arr[m] = a === 'wound' ? Math.min(it.max, arr[m] + 1) : Math.max(0, arr[m] - 1);
   play.wounds.set(it.sid, arr); savePlaySoon(); renderTrack(); renderToc();
 };
+$('pTrack').addEventListener('change', e => {
+  const t = e.target, d = play.dice; if (!d) return;
+  if (t.matches('[data-dn]')) d.n = Math.max(1, Math.min(40, parseInt(t.value) || 1));
+  if (t.matches('[data-dt]')) d.target = Math.max(2, Math.min(6, parseInt(t.value) || 4));
+});
 let tx = 0, ty = 0;
 $('pStage').addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
 $('pStage').addEventListener('touchend', e => {
