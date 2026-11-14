@@ -22,6 +22,16 @@ body{margin:0;background:var(--bench);color:#e8eaee;font:14px/1.4 "Trebuchet MS"
 header{position:sticky;top:0;z-index:20;background:var(--ink);border-bottom:2px solid var(--amber);display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px}
 header h1{margin:0;font:800 17px/1 "Arial Narrow","Franklin Gothic Medium",Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
 header input[type=text]{flex:1;min-width:240px;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:#fff}
+.urlwrap{position:relative;flex:1;min-width:240px;display:flex}
+.urlwrap input{flex:1;min-width:0}
+#urlDrop{position:absolute;left:0;right:0;top:100%;z-index:30;margin-top:4px;max-height:min(320px,50vh);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+#urlDrop[hidden]{display:none!important}
+#urlDrop button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:10px 12px;border:0;border-radius:0;border-bottom:1px solid var(--line);background:transparent;color:#e8eaee;font-weight:600;cursor:pointer}
+#urlDrop button:last-child{border-bottom:0}
+#urlDrop button:hover{background:var(--bench)}
+#urlDrop b{font-weight:700;color:#fff}
+#urlDrop small{font-weight:500;color:var(--mute);font-size:11px}
+#urlDrop .muted{color:var(--mute);font-weight:600}
 button{border:0;border-radius:4px;padding:8px 14px;font-weight:700;cursor:pointer;background:var(--amber);color:#111}
 button:disabled{opacity:.4;cursor:default}
 .wrap{max-width:1200px;margin:0 auto;padding:12px 16px}
@@ -132,7 +142,10 @@ button{touch-action:manipulation}
 <body>
 <header>
   <h1>Card Forge</h1>
-  <input type="text" id="url" placeholder="Army Forge share link…">
+  <div class="urlwrap">
+    <input type="text" id="url" placeholder="Army Forge share link…" autocomplete="off">
+    <div id="urlDrop" hidden></div>
+  </div>
   <button id="load">Import</button>
   <button id="playBtn" disabled>▶ Play</button>
   <button id="export" disabled>Export PNGs</button>
@@ -213,6 +226,11 @@ const imgKey = u => String(u.genericName || u.name || '').toLowerCase().trim();
 const saveImg = u => { const im = imgs.get(sidOf(u)); if (im && imgKey(u)) idb.set(imgKey(u), im); };
 
 const saveText = () => idb.set('__text', { ...refText, titles: [...refTitles], smap: [...spellMap] });
+
+let listId = null;
+const listKey = id => `__list:${id}`;
+const listIndex = async () => (await idb.get('__lists')) || [];
+let _saveT; const savePlaySoon = () => { clearTimeout(_saveT); _saveT = setTimeout(() => persistList(), 250); };
 
 // ---------- UI scaffolding ----------
 $('sizes').innerHTML = GROUPS.map(([title, sids, cids]) =>
@@ -433,7 +451,7 @@ $('grid').addEventListener('click', e => {
     const k = aid + '::' + orig, v = ask(label + ' (this faction only; values in brackets stay fixed):', map.get(k) || orig);
     const c = v && v.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
     if (!c) return;
-    c === orig ? map.delete(k) : map.set(k, c); render();
+    c === orig ? map.delete(k) : map.set(k, c); savePlaySoon(); render();
   };
   if (t.dataset.rm !== undefined) {
     const u = army.units.find(u => String(sidOf(u)) === sid); imgs.delete(sidOf(u)); idb.del(imgKey(u)); return render();
@@ -442,10 +460,10 @@ $('grid').addEventListener('click', e => {
   if (t.dataset.wpn !== undefined) return rename(wpnNames, parseWpn(t.dataset.wpn).name, 'Rename weapon');
   if (t.dataset.nm !== undefined) {
     const u = army.units.find(u => String(sidOf(u)) === sid), v = ask('Rename unit:', nameOf(u));
-    if (v) { names.set(sidOf(u), v); render(); }
+    if (v) { names.set(sidOf(u), v); savePlaySoon(); render(); }
   } else if (t.dataset.fac !== undefined) {
     const u = army.units.find(u => armyKey(u) === t.dataset.fac), v = ask('Rename faction (whole army):', factionOf(u));
-    if (v) { facs.set(t.dataset.fac, v); render(); }
+    if (v) { facs.set(t.dataset.fac, v); savePlaySoon(); render(); }
   } else if (t.dataset.title) {
     const v = ask('Rename card title:', t.dataset.cur);
     if (v) { refTitles.set(t.dataset.title, v); saveText(); render(); }
@@ -455,7 +473,7 @@ $('grid').addEventListener('change', e => {
   const t = e.target, el = t.closest('[data-sid]') || t.closest('.shell').querySelector('[data-sid]');
   if (!el) return;
   const sid = el.dataset.sid, u = army.units.find(u => String(sidOf(u)) === sid), key = sidOf(u);
-  if (t.matches('[data-q]')) { qty.set(key, Math.max(1, Math.min(20, parseInt(t.value) || 1))); render(); }
+  if (t.matches('[data-q]')) { qty.set(key, Math.max(1, Math.min(20, parseInt(t.value) || 1))); savePlaySoon(); render(); }
   else if (t.matches('[data-tr]')) { saveImg(u); render(); }
   else if (t.matches('[data-file]') && t.files[0]) {
     const fr = new FileReader();
@@ -484,27 +502,95 @@ async function load() {
   try { id = new URL(v).searchParams.get('id'); } catch (_) {}
   id = id || (/^[\w-]+$/.test(v) ? v : null);
   if (!id) return status('Paste a valid Army Forge share link.', 'err');
-  $('load').disabled = true; status('Loading…');
+  $('load').disabled = true; hideDrop(); status('Loading…');
   try {
     const res = await fetch(`${API}?id=${encodeURIComponent(id)}`);
     if (!res.ok) throw new Error(`Couldn’t load list (${res.status}). Is it shared via “Share as Link”?`);
     const data = await res.json();
     if (!Array.isArray(data.units)) throw new Error('Unexpected response — the list may be empty or private.');
-    army = data; play.wounds.clear(); play.dead.clear(); play.i = 0; ruleNames.clear(); wpnNames.clear(); names.clear(); facs.clear(); qty.clear(); imgs.clear();
-    let restored = 0;
-    for (const u of data.units) { const rec = await idb.get(imgKey(u)); if (rec) { imgs.set(sidOf(u), { src: rec.src, t: { ...rec.t } }); restored++; } }
-    status(`Loaded “${data.name || id}” · ${data.units.length} units · ${data.listPoints ?? '?'} pts${restored ? ` · ${restored} saved image${restored > 1 ? 's' : ''} restored` : ''}`, 'ok');
+    const prev = await idb.get(listKey(id));
+    await applyList({ id, url: v || id, name: data.name || id, pts: data.listPoints, army: data,
+      state: prev && prev.state ? prev.state : { wounds: [], dead: [], playI: 0 } }, true);
   } catch (err) {
-    army = null; status(err.message.startsWith('Failed') ? 'Network error contacting Army Forge.' : err.message, 'err');
+    army = null; listId = null; status(err.message.startsWith('Failed') ? 'Network error contacting Army Forge.' : err.message, 'err');
+    render();
   }
-  $('load').disabled = false; render();
+  $('load').disabled = false;
 }
 $('load').onclick = load;
-$('url').addEventListener('keydown', e => e.key === 'Enter' && load());
+$('url').addEventListener('keydown', e => { if (e.key === 'Enter') load(); if (e.key === 'Escape') hideDrop(); });
+$('url').addEventListener('focus', () => showDrop());
+$('url').addEventListener('click', () => showDrop());
+$('urlDrop').addEventListener('mousedown', e => e.preventDefault()); // keep focus while clicking
+$('urlDrop').addEventListener('click', async e => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  if (btn.dataset.clear) {
+    const idx = await listIndex();
+    for (const e of idx) await idb.del(listKey(e.id));
+    await idb.set('__lists', []); hideDrop(); return status('Cleared saved lists.', 'ok');
+  }
+  const id = btn.dataset.lid; if (!id) return;
+  const entry = await idb.get(listKey(id));
+  hideDrop();
+  if (!entry || !entry.army) return status('Saved list missing — re-import it.', 'err');
+  $('load').disabled = true; status('Restoring…');
+  try { await applyList(entry, false); } catch (err) { status(err.message, 'err'); }
+  $('load').disabled = false;
+});
+document.addEventListener('click', e => { if (!e.target.closest('.urlwrap')) hideDrop(); });
 $('print').onclick = () => print();
 
 // ---------- play mode: one big card, swipe/arrows/contents, per-model toughness, destroy, rule popups ----------
 const play = { on: false, i: 0, list: [], wounds: new Map(), dead: new Set(), lookup: new Map(), refOpen: false, back: null, pick: false };
+const snapState = () => ({
+  wounds: [...play.wounds.entries()], dead: [...play.dead], playI: play.i,
+  names: [...names], facs: [...facs], qty: [...qty], ruleNames: [...ruleNames], wpnNames: [...wpnNames],
+});
+function applyState(st) {
+  if (!st) { play.wounds.clear(); play.dead.clear(); play.i = 0; return; }
+  play.wounds = new Map(st.wounds || []); play.dead = new Set(st.dead || []); play.i = st.playI || 0;
+  names.clear(); (st.names || []).forEach(([k, v]) => names.set(k, v));
+  facs.clear(); (st.facs || []).forEach(([k, v]) => facs.set(k, v));
+  qty.clear(); (st.qty || []).forEach(([k, v]) => qty.set(k, v));
+  ruleNames.clear(); (st.ruleNames || []).forEach(([k, v]) => ruleNames.set(k, v));
+  wpnNames.clear(); (st.wpnNames || []).forEach(([k, v]) => wpnNames.set(k, v));
+}
+async function persistList() {
+  if (!army || !listId) return;
+  const entry = { id: listId, url: $('url').value.trim() || listId, name: army.name || listId,
+    pts: army.listPoints, savedAt: Date.now(), army, state: snapState() };
+  await idb.set(listKey(listId), entry);
+  const idx = [{ id: listId, name: entry.name, pts: entry.pts, savedAt: entry.savedAt },
+    ...(await listIndex()).filter(x => x.id !== listId)].slice(0, 30);
+  await idb.set('__lists', idx);
+}
+async function restoreImgs(units) {
+  let n = 0; for (const u of units || []) {
+    const rec = await idb.get(imgKey(u)); if (rec) { imgs.set(sidOf(u), { src: rec.src, t: { ...rec.t } }); n++; }
+  } return n;
+}
+async function applyList(entry, fromNet) {
+  listId = entry.id; army = entry.army;
+  $('url').value = entry.url || entry.id;
+  ruleNames.clear(); wpnNames.clear(); names.clear(); facs.clear(); qty.clear(); imgs.clear();
+  applyState(entry.state);
+  const restored = await restoreImgs(army.units);
+  const tag = fromNet ? 'Imported' : 'Restored';
+  status(`${tag} “${army.name || listId}” · ${(army.units || []).length} units · ${army.listPoints ?? '?'} pts` +
+    (restored ? ` · ${restored} image${restored > 1 ? 's' : ''}` : '') +
+    (entry.state && ((entry.state.wounds || []).length || (entry.state.dead || []).length) ? ' · play state restored' : ''), 'ok');
+  await persistList(); render();
+}
+async function showDrop() {
+  const idx = await listIndex(), box = $('urlDrop');
+  if (!idx.length) { box.hidden = true; box.innerHTML = ''; return; }
+  box.innerHTML = idx.map(e =>
+    `<button type="button" data-lid="${esc(e.id)}"><b>${esc(e.name || e.id)}</b>` +
+    `<small>${e.pts != null ? e.pts + ' pts · ' : ''}${new Date(e.savedAt).toLocaleString()}</small></button>`
+  ).join('') + `<button type="button" data-clear class="muted">Clear saved lists</button>`;
+  box.hidden = false;
+}
+function hideDrop() { $('urlDrop').hidden = true; }
 const modelsOf = it => play.wounds.get(it.sid) || Array(it.n).fill(0);   // wounds lost per model
 const aliveOf = it => modelsOf(it).filter(l => l < it.max).length;
 function buildLookup() {
@@ -653,7 +739,7 @@ $('pPrev').onclick = () => go(-1); $('pNext').onclick = () => go(1);
 $('pToc').onclick = e => {
   const b = e.target.closest('[data-k]'); if (!b) return;
   if (b.dataset.k === 'refs') { play.refOpen = !play.refOpen; return renderToc(); }
-  if (b.dataset.k === 'reset') { play.wounds.clear(); play.dead.clear(); }
+  if (b.dataset.k === 'reset') { play.wounds.clear(); play.dead.clear(); savePlaySoon(); }
   else { play.i = +b.dataset.k; play.back = null; $('pToc').hidden = true; }
   showPlay();
 };
@@ -666,10 +752,10 @@ $('pTrack').onclick = e => {
   if (a === 'chg') { play.pick = true; return renderTrack(); }
   if (a === 'cancel') { play.pick = false; return renderTrack(); }
   if (a === 'pick') { spellMap.set(it.aid, btn.dataset.rk); saveText(); const b = spellBlocks().find(b => b.rk === btn.dataset.rk); play.pick = false; return b ? openSpell(b) : renderTrack(); }
-  if (a === 'destroy') { play.dead.has(it.sid) ? play.dead.delete(it.sid) : play.dead.add(it.sid); return showPlay(); }
+  if (a === 'destroy') { play.dead.has(it.sid) ? play.dead.delete(it.sid) : play.dead.add(it.sid); savePlaySoon(); return showPlay(); }
   const arr = [...modelsOf(it)], m = +btn.dataset.m;
   arr[m] = a === 'wound' ? Math.min(it.max, arr[m] + 1) : Math.max(0, arr[m] - 1);
-  play.wounds.set(it.sid, arr); renderTrack(); renderToc();
+  play.wounds.set(it.sid, arr); savePlaySoon(); renderTrack(); renderToc();
 };
 let tx = 0, ty = 0;
 $('pStage').addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
