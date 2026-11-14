@@ -50,6 +50,15 @@ header input[type=text]{flex:1;min-width:240px;padding:8px 10px;border:1px solid
 .cambar button{padding:8px 14px;font-size:12px}
 .cambar .danger{background:#d9453f;color:#fff}
 .card.cam-on .tool,.card.cam-on .imgmenu{display:none!important}
+#qrModal{position:fixed;inset:0;z-index:180;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+#qrModal[hidden]{display:none!important}
+#qrModal .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;max-width:360px;width:100%;color:#e8eaee}
+#qrModal h2{margin:0 0 8px;font:800 14px/1.2 system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
+#qrModal .hint{font-size:12px;color:var(--mute);margin:0 0 10px}
+#qrModal img{display:block;width:240px;height:240px;margin:8px auto;background:#fff;border-radius:6px}
+#qrModal .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
+#qrModal textarea{width:100%;min-height:64px;margin-top:6px;padding:8px;background:var(--ink);color:#fff;border:1px solid var(--line);border-radius:4px;font:11px/1.3 ui-monospace,Consolas,monospace}
+#qrModal video{width:100%;max-height:220px;background:#000;border-radius:6px;object-fit:cover}
 .ref .body{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
 .ref .top,.ref .rb{position:relative;z-index:1}
 .ref .rb{background:color-mix(in srgb, var(--cRefBody) 88%, transparent)}
@@ -168,10 +177,30 @@ button{touch-action:manipulation}
     <div id="urlDrop" hidden></div>
   </div>
   <button id="load">Import</button>
+  <button id="qrBtn" type="button" title="QR import / export saved list">QR</button>
   <button id="playBtn" disabled>▶ Play</button>
   <button id="export" disabled>Export PNGs</button>
   <button id="print" disabled>Print</button>
 </header>
+<div id="qrModal" hidden>
+  <div class="box">
+    <h2>List QR</h2>
+    <p class="hint">Exports share id + play state (wounds, destroyed, renames, qty). Images stay on this device. Import re-fetches the list from Army Forge.</p>
+    <div id="qrExport">
+      <img id="qrImg" alt="QR code" hidden>
+      <p class="hint" id="qrExportMsg">Load a list to export.</p>
+      <textarea id="qrText" readonly hidden></textarea>
+    </div>
+    <div class="row">
+      <button type="button" id="qrMake">Show export QR</button>
+      <button type="button" id="qrScan">Scan QR</button>
+      <button type="button" id="qrPaste">Import pasted code</button>
+      <button type="button" id="qrClose">Close</button>
+    </div>
+    <video id="qrVideo" playsinline muted hidden></video>
+    <textarea id="qrIn" placeholder="Paste CF1:… code here" hidden></textarea>
+  </div>
+</div>
 <div class="wrap">
   <div id="status"></div>
   <details><summary>Layout &amp; sizes</summary><div>
@@ -701,6 +730,18 @@ async function load() {
   $('load').disabled = false;
 }
 $('load').onclick = load;
+$('qrBtn').onclick = openQrModal;
+$('qrClose').onclick = closeQrModal;
+$('qrMake').onclick = () => showExportQr().catch(err => status(err.message, 'err'));
+$('qrScan').onclick = () => scanQrCamera().catch(err => status(err.message, 'err'));
+$('qrPaste').onclick = async () => {
+  $('qrIn').hidden = false;
+  const t = $('qrIn').value.trim() || $('qrText').value.trim();
+  if (!t) return status('Paste a CF1: code into the box, then tap Import pasted code again.', 'err');
+  try { await importQrData(unpackQrPayload(t)); }
+  catch (err) { status(err.message, 'err'); }
+};
+$('qrModal').addEventListener('click', e => { if (e.target.id === 'qrModal') closeQrModal(); });
 $('url').addEventListener('keydown', e => { if (e.key === 'Enter') load(); if (e.key === 'Escape') hideDrop(); });
 $('url').addEventListener('focus', () => showDrop());
 $('url').addEventListener('click', () => showDrop());
@@ -780,6 +821,87 @@ async function applyList(entry, fromNet) {
     (restored ? ` · ${restored} image${restored > 1 ? 's' : ''}` : '') +
     (entry.state && ((entry.state.wounds || []).length || (entry.state.dead || []).length) ? ' · play state restored' : ''), 'ok');
   await persistList(); render();
+}
+function packQrPayload() {
+  if (!listId || !army) return null;
+  const payload = { v: 1, id: listId, n: army.name || listId, s: snapState() };
+  return 'CF1:' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+}
+function unpackQrPayload(text) {
+  const t = String(text || '').trim();
+  const i = t.indexOf('CF1:');
+  if (i < 0) throw new Error('Not a Card Forge list QR (missing CF1: prefix).');
+  const raw = t.slice(i + 4).replace(/\s+/g, '');
+  const json = decodeURIComponent(escape(atob(raw)));
+  const data = JSON.parse(json);
+  if (!data || !data.id) throw new Error('QR payload has no list id.');
+  return data;
+}
+let qrStream = null;
+function stopQrScan() {
+  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+  const v = $('qrVideo'); if (v) { v.srcObject = null; v.hidden = true; }
+}
+function openQrModal() {
+  stopQrScan();
+  $('qrIn').hidden = true; $('qrText').hidden = true; $('qrImg').hidden = true;
+  $('qrExportMsg').hidden = false;
+  $('qrExportMsg').textContent = army && listId ? 'Tap “Show export QR” to share this list’s play state.' : 'Load a list to export, or scan/paste to import.';
+  $('qrModal').hidden = false;
+}
+function closeQrModal() { stopQrScan(); $('qrModal').hidden = true; }
+async function showExportQr() {
+  const code = packQrPayload();
+  if (!code) return status('Load a list before exporting a QR.', 'err');
+  if (code.length > 1800) return status('Play state is too large for one QR — try resetting wounds first.', 'err');
+  $('qrExportMsg').hidden = true;
+  $('qrText').value = code; $('qrText').hidden = false;
+  const img = $('qrImg');
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&ecc=M&data=' + encodeURIComponent(code);
+  img.hidden = false;
+}
+async function importQrData(data) {
+  closeQrModal();
+  status('Importing list from QR…');
+  $('load').disabled = true;
+  try {
+    const res = await fetch(`${API}?id=${encodeURIComponent(data.id)}`);
+    if (!res.ok) throw new Error(`Couldn’t load list (${res.status}).`);
+    const armyData = await res.json();
+    if (!Array.isArray(armyData.units)) throw new Error('Unexpected list data from Army Forge.');
+    await applyList({ id: data.id, url: data.id, name: data.n || armyData.name || data.id,
+      pts: armyData.listPoints, army: armyData, state: data.s || { wounds: [], dead: [], playI: 0 } }, false);
+  } catch (err) {
+    status(err.message.startsWith('Failed') ? 'Network error contacting Army Forge.' : err.message, 'err');
+  }
+  $('load').disabled = false;
+}
+async function scanQrCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) return status('Camera not available.', 'err');
+  stopQrScan();
+  $('qrIn').hidden = true;
+  try {
+    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+  } catch (_) { return status('Camera permission denied.', 'err'); }
+  const video = $('qrVideo'); video.hidden = false; video.srcObject = qrStream; await video.play().catch(() => {});
+  if (window.BarcodeDetector) {
+    const det = new BarcodeDetector({ formats: ['qr_code'] });
+    const tick = async () => {
+      if (!qrStream) return;
+      try {
+        const codes = await det.detect(video);
+        if (codes && codes[0]?.rawValue) {
+          const data = unpackQrPayload(codes[0].rawValue);
+          return importQrData(data);
+        }
+      } catch (_) {}
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  } else {
+    status('Live scan needs Chrome/Edge. Paste the CF1: code instead.', 'err');
+    $('qrIn').hidden = false;
+  }
 }
 async function showDrop() {
   const idx = await listIndex(), box = $('urlDrop');
