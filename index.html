@@ -185,7 +185,7 @@ button{touch-action:manipulation}
 <div id="qrModal" hidden>
   <div class="box">
     <h2>List QR</h2>
-    <p class="hint">Exports share id + play state (wounds, destroyed, renames, qty). Images stay on this device. Import re-fetches the list from Army Forge.</p>
+    <p class="hint">Exports share id, play state, and reference text (core / faction rules / spells). Images stay on this device. Import re-fetches the list from Army Forge.</p>
     <div id="qrExport">
       <img id="qrImg" alt="QR code" hidden>
       <p class="hint" id="qrExportMsg">Load a list to export.</p>
@@ -738,7 +738,7 @@ $('qrPaste').onclick = async () => {
   $('qrIn').hidden = false;
   const t = $('qrIn').value.trim() || $('qrText').value.trim();
   if (!t) return status('Paste a CF1: code into the box, then tap Import pasted code again.', 'err');
-  try { await importQrData(unpackQrPayload(t)); }
+  try { await importQrData(await unpackQrPayload(t)); }
   catch (err) { status(err.message, 'err'); }
 };
 $('qrModal').addEventListener('click', e => { if (e.target.id === 'qrModal') closeQrModal(); });
@@ -822,15 +822,38 @@ async function applyList(entry, fromNet) {
     (entry.state && ((entry.state.wounds || []).length || (entry.state.dead || []).length) ? ' · play state restored' : ''), 'ok');
   await persistList(); render();
 }
-function packQrPayload() {
+async function packQrPayload() {
   if (!listId || !army) return null;
-  const payload = { v: 1, id: listId, n: army.name || listId, s: snapState() };
-  return 'CF1:' + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const payload = {
+    v: 2, id: listId, n: army.name || listId, s: snapState(),
+    r: { core: refText.core || '', faction: refText.faction || '', spells: refText.spells || '',
+      titles: [...refTitles], smap: [...spellMap] }
+  };
+  const json = JSON.stringify(payload);
+  // Prefer gzip so core/faction/spell text can fit; CF2: = gzip, CF1: = plain (old readers)
+  if (window.CompressionStream) {
+    const buf = new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+    let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    return 'CF2:' + btoa(bin);
+  }
+  return 'CF1:' + btoa(unescape(encodeURIComponent(json)));
 }
-function unpackQrPayload(text) {
+async function unpackQrPayload(text) {
   const t = String(text || '').trim();
-  const i = t.indexOf('CF1:');
-  if (i < 0) throw new Error('Not a Card Forge list QR (missing CF1: prefix).');
+  let i = t.indexOf('CF2:');
+  if (i >= 0) {
+    const raw = t.slice(i + 4).replace(/\s+/g, '');
+    const bin = atob(raw);
+    const bytes = new Uint8Array(bin.length);
+    for (let j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+    if (!window.DecompressionStream) throw new Error('This browser can’t decode compressed QR data.');
+    const json = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+    const data = JSON.parse(json);
+    if (!data || !data.id) throw new Error('QR payload has no list id.');
+    return data;
+  }
+  i = t.indexOf('CF1:');
+  if (i < 0) throw new Error('Not a Card Forge list QR (need CF1: or CF2: prefix).');
   const raw = t.slice(i + 4).replace(/\s+/g, '');
   const json = decodeURIComponent(escape(atob(raw)));
   const data = JSON.parse(json);
@@ -846,18 +869,32 @@ function openQrModal() {
   stopQrScan();
   $('qrIn').hidden = true; $('qrText').hidden = true; $('qrImg').hidden = true;
   $('qrExportMsg').hidden = false;
-  $('qrExportMsg').textContent = army && listId ? 'Tap “Show export QR” to share this list’s play state.' : 'Load a list to export, or scan/paste to import.';
+  $('qrExportMsg').textContent = army && listId ? 'Tap “Show export QR” to share play state + reference text.' : 'Load a list to export, or scan/paste to import.';
   $('qrModal').hidden = false;
 }
 function closeQrModal() { stopQrScan(); $('qrModal').hidden = true; }
+function applyRefFromQr(r) {
+  if (!r) return;
+  if (r.core != null) refText.core = r.core;
+  if (r.faction != null) refText.faction = r.faction;
+  if (r.spells != null) refText.spells = r.spells;
+  if (r.titles) { refTitles.clear(); r.titles.forEach(([k, v]) => refTitles.set(k, v)); }
+  if (r.smap) { spellMap.clear(); r.smap.forEach(([k, v]) => spellMap.set(k, v)); }
+  document.querySelectorAll('[data-ref]').forEach(ta => { ta.value = refText[ta.dataset.ref] || ''; });
+  saveText();
+}
 async function showExportQr() {
-  const code = packQrPayload();
+  const code = await packQrPayload();
   if (!code) return status('Load a list before exporting a QR.', 'err');
-  if (code.length > 1800) return status('Play state is too large for one QR — try resetting wounds first.', 'err');
   $('qrExportMsg').hidden = true;
   $('qrText').value = code; $('qrText').hidden = false;
+  if (code.length > 2200) {
+    $('qrImg').hidden = true;
+    status('Code is large — use copy/paste of the text (QR may not scan reliably).', 'err');
+    return;
+  }
   const img = $('qrImg');
-  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&ecc=M&data=' + encodeURIComponent(code);
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&ecc=L&data=' + encodeURIComponent(code);
   img.hidden = false;
 }
 async function importQrData(data) {
@@ -869,6 +906,7 @@ async function importQrData(data) {
     if (!res.ok) throw new Error(`Couldn’t load list (${res.status}).`);
     const armyData = await res.json();
     if (!Array.isArray(armyData.units)) throw new Error('Unexpected list data from Army Forge.');
+    applyRefFromQr(data.r);
     await applyList({ id: data.id, url: data.id, name: data.n || armyData.name || data.id,
       pts: armyData.listPoints, army: armyData, state: data.s || { wounds: [], dead: [], playI: 0 } }, false);
   } catch (err) {
@@ -891,7 +929,7 @@ async function scanQrCamera() {
       try {
         const codes = await det.detect(video);
         if (codes && codes[0]?.rawValue) {
-          const data = unpackQrPayload(codes[0].rawValue);
+          const data = await unpackQrPayload(codes[0].rawValue);
           return importQrData(data);
         }
       } catch (_) {}
