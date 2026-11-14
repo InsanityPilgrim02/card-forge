@@ -126,12 +126,13 @@ button{touch-action:manipulation}
 .pnav{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:44px;height:84px;font-size:34px;padding:0;background:rgba(0,0,0,.6);color:#fff}
 #pPrev{left:4px}#pNext{right:4px}
 .pnav:disabled{opacity:.15}
-#pTrack{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;padding:10px 12px;background:var(--ink);border-top:1px solid var(--line);height:min(190px,34vh);overflow:hidden;flex:none}
-#pTrack .pwounds{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;flex:1;min-height:0;overflow:auto;justify-content:center}
+#pTrack{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:6px;padding:8px 12px;background:var(--ink);border-top:1px solid var(--line);height:min(250px,44vh);overflow:hidden;flex:none}
+#pTrack .phead{flex:none;width:100%;display:flex;justify-content:center}
+#pTrack .pbody{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;justify-content:flex-start}
 #pTrack .pbot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px 14px;width:100%;flex:none}
 #pTrack .pbot>[data-a=destroy]{grid-column:2;justify-self:center}
 #pTrack .pbot>.pdice{grid-column:1;justify-self:end;display:flex;gap:8px;align-items:center}
-#pTrack .diceui{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;padding:4px 0;color:#e8eaee;font-size:14px}
+#pTrack .diceui,#pTrack .spellui{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;padding:4px 0;color:#e8eaee;font-size:14px}
 #pTrack .diceui .drow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:center}
 #pTrack .diceui label{color:var(--mute);font-size:12px}
 #pTrack .diceui input[type=number]{width:3.6em;padding:6px 8px;background:var(--panel);color:#fff;border:1px solid var(--line);border-radius:4px}
@@ -139,9 +140,16 @@ button{touch-action:manipulation}
 #pTrack .diceui .dres{text-align:center;line-height:1.35}
 #pTrack .diceui .dres b{color:var(--amber)}
 #pTrack .diceui .drolls{font-size:12px;color:var(--mute);max-width:100%;word-break:break-word}
-#pTrack .pbot>.pspells{grid-column:3;justify-self:start;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
-#pTrack .pdice button,#pTrack .pspells > button[data-a=spells]{min-width:7.5em;padding:12px 16px;font-size:15px;box-sizing:border-box;text-align:center}
+#pTrack .spellui{align-items:stretch;text-align:left}
+#pTrack .spellui > b{text-align:center;color:var(--amber);font-size:13px}
+#pTrack .spellui .spellbody{font-size:12px;line-height:1.35;color:#e8eaee}
+#pTrack .spellui .spellbody .re{border-bottom:1px solid var(--line);padding:4px 0}
+#pTrack .spellui .spellbody .re b{color:#fff;font-size:12px}
+#pTrack .spellui .spellbody .re p{margin:2px 0 0;color:var(--mute)}
+#pTrack .pbot>.pspells{grid-column:3;justify-self:start;display:flex;gap:8px;align-items:center}
 #pTrack button{padding:12px 16px;font-size:15px}
+#pTrack .pbot > button,#pTrack .pdice button,#pTrack .pspells > button{height:44px;min-width:7.5em;padding:0 16px;font-size:15px;line-height:1;box-sizing:border-box;text-align:center;display:inline-flex;align-items:center;justify-content:center}
+#pTrack .pdice button.on,#pTrack .pspells > button.on{outline:2px solid var(--amber);background:#333}
 #pTrack .danger,.danger{background:#d9453f;color:#fff}
 .pips{display:flex;gap:5px;flex-wrap:wrap;max-width:100%}
 .pips i{width:16px;height:16px;border-radius:50%;border:2px solid var(--amber)}.pips i.on{background:var(--amber)}
@@ -751,7 +759,7 @@ document.addEventListener('click', e => {
 $('print').onclick = () => print();
 
 // ---------- play mode: one big card, swipe/arrows/contents, per-model toughness, destroy, rule popups ----------
-const play = { on: false, i: 0, list: [], wounds: new Map(), dead: new Set(), lookup: new Map(), refOpen: false, back: null, pick: false, dice: null };
+const play = { on: false, i: 0, list: [], wounds: new Map(), dead: new Set(), lookup: new Map(), refOpen: false, back: null, pick: false, dice: null, spell: null };
 const snapState = () => ({
   wounds: [...play.wounds.entries()], dead: [...play.dead], playI: play.i,
   names: [...names], facs: [...facs], qty: [...qty], ruleNames: [...ruleNames], wpnNames: [...wpnNames],
@@ -830,7 +838,7 @@ function openPlay() {
   showPlay();
 }
 function closePlay() {
-  play.on = false; play.back = null; play.dice = null; hideTip(); $('play').hidden = true; document.body.style.overflow = '';
+  play.on = false; play.back = null; play.dice = null; play.spell = null; hideTip(); $('play').hidden = true; document.body.style.overflow = '';
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 }
 // make rules with a known description tappable/hoverable (unit rule chips and weapon special rules)
@@ -907,30 +915,50 @@ const pickBlock = (it, bl) => {
   }
   return best;
 };
-const openSpell = b => { play.dice = null; play.back = play.i; play.i = b.idx; showPlay(); };
+function spellPanelHtml(sp) {
+  return `<div class="spellui"><b>${esc(sp.title)}</b><div class="spellbody">${sp.html}</div></div>`;
+}
+function openSpellPanel(it) {
+  const pk = pickBlock(it, spellBlocks());
+  if (!pk) { play.spellMiss = true; play.spell = null; return renderTrack(); }
+  const el = play.list[pk.idx]?.el;
+  const html = el?.querySelector('.rb')?.innerHTML || '<p class="pmute">No spell text on card.</p>';
+  play.dice = null;
+  play.spell = { title: pk.title || 'Spells', html };
+  return renderTrack();
+}
 function renderTrack() {
   const it = play.list[play.i], t = $('pTrack');
   const blocks = spellBlocks();
   const dead = play.dead.has(it.sid);
-  const spellsBtn = (it.caster && blocks.length) || (it.ref && play.back != null)
-    ? `<div class="pspells"><button data-a="spells" class="${it.ref && play.back != null ? 'on' : ''}">✦ Spells</button></div>`
-    : '';
-  const diceBtn = !it.ref
-    ? `<div class="pdice"><button type="button" data-a="dice" class="${play.dice ? 'on' : ''}">Dice</button></div>`
-    : '';
-  const destroyBtn = it.ref ? '' : `<button data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore' : 'Destroy'}</button>`;
-
+  // Bottom bar always for unit cards
   if (it.ref) {
-    t.innerHTML = play.back != null
-      ? `<div class="pwounds"><span class="pmute">Spell list — tap ✦ Spells again to return</span></div><div class="pbot">${spellsBtn}</div>`
-      : `<div class="pwounds"><span class="pmute">Reference card</span></div><div class="pbot"></div>`;
+    t.innerHTML = `<div class="pbody"><span class="pmute">Reference card</span></div><div class="pbot"></div>`;
     return;
   }
+  const spellsBtn = it.caster && blocks.length
+    ? `<div class="pspells"><button type="button" data-a="spells" class="${play.spell ? 'on' : ''}">Spells</button></div>`
+    : '';
+  const diceBtn = `<div class="pdice"><button type="button" data-a="dice" class="${play.dice ? 'on' : ''}">Dice</button></div>`;
+  const destroyBtn = `<button type="button" data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore' : 'Destroy'}</button>`;
+  const pbot = `<div class="pbot">${diceBtn}${destroyBtn}${spellsBtn}</div>`;
+
+  // Unit selector always pinned above the scroll area
+  const sibs = it.copies > 1
+    ? play.list.map((x, k) => ({ x, k })).filter(o => o.x.baseSid === it.baseSid)
+    : [];
+  const unitNav = sibs.length > 1
+    ? `<div class="phead"><div class="ucopies">${sibs.map(o => `<button type="button" data-a="copy" data-i="${o.k}" class="${o.k === play.i ? 'on' : ''}">Unit ${o.x.copy}</button>`).join('')}</div></div>`
+    : '';
+
   if (play.spellMiss) {
     play.spellMiss = false;
-    t.innerHTML = `<div class="pwounds"><span class="pmute">No spell list matches this faction — name a rules card like “Prime Brothers Spells”</span></div>
-      <div class="pbot">${diceBtn}${destroyBtn}${spellsBtn}</div>`;
+    t.innerHTML = `${unitNav}<div class="pbody"><span class="pmute">No spell list matches this faction — name a card like “Prime Brothers Spells”</span></div>${pbot}`;
     setTimeout(() => renderTrack(), 2200);
+    return;
+  }
+  if (play.spell) {
+    t.innerHTML = `${unitNav}<div class="pbody">${spellPanelHtml(play.spell)}</div>${pbot}`;
     return;
   }
   if (play.dice) {
@@ -938,18 +966,17 @@ function renderTrack() {
     const res = d.last ? `<div class="dres"><b>${d.last.pass}</b> success${d.last.pass === 1 ? '' : 'es'} on ${d.n}d6 · ${d.target}+<br>
       <span>1s: <b>${d.last.ones}</b> · 6s: <b>${d.last.sixes}</b></span>
       <div class="drolls">[${d.last.rolls.join(', ')}]</div></div>` : '<span class="pmute">Set dice &amp; target, then Roll</span>';
-    t.innerHTML = `<div class="pwounds"><div class="diceui">
+    t.innerHTML = `${unitNav}<div class="pbody"><div class="diceui">
       <div class="drow">
         <label>Dice <input type="number" min="1" max="40" value="${d.n}" data-dn></label>
         <label>Pass on <select data-dt>${[2,3,4,5,6].map(n => `<option value="${n}"${n===d.target?' selected':''}>${n}+</option>`).join('')}</select></label>
         <button type="button" data-a="roll">Roll</button>
       </div>
       ${res}
-    </div></div>
-    <div class="pbot">${diceBtn}${destroyBtn}${spellsBtn}</div>`;
+    </div></div>${pbot}`;
     return;
   }
-  const keep = t.querySelector('.pwounds')?.scrollTop || 0;
+  const keep = t.querySelector('.pbody')?.scrollTop || 0;
   let rows = '', head = '';
   if (it.max) {
     const arr = modelsOf(it);
@@ -962,15 +989,8 @@ function renderTrack() {
     }).join('');
     head = `<b class="${aliveOf(it) < 1 ? 'out' : ''}">Models ${aliveOf(it)} / ${it.n} · Tough ${it.max} each</b>`;
   }
-  const sibs = it.copies > 1
-    ? play.list.map((x, k) => ({ x, k })).filter(o => o.x.baseSid === it.baseSid)
-    : [];
-  const unitNav = sibs.length > 1
-    ? `<div class="ucopies">${sibs.map(o => `<button type="button" data-a="copy" data-i="${o.k}" class="${o.k === play.i ? 'on' : ''}">Unit ${o.x.copy}</button>`).join('')}</div>`
-    : '';
-  t.innerHTML = `<div class="pwounds">${unitNav}${head}${rows ? `<div class="mdls">${rows}</div>` : ''}</div>
-    <div class="pbot">${diceBtn}${destroyBtn}${spellsBtn}</div>`;
-  const pw = t.querySelector('.pwounds'); if (pw) pw.scrollTop = keep;
+  t.innerHTML = `${unitNav}<div class="pbody">${head}${rows ? `<div class="mdls">${rows}</div>` : ''}</div>${pbot}`;
+  const body = t.querySelector('.pbody'); if (body) body.scrollTop = keep;
 }
 
 function renderToc() {
@@ -1030,8 +1050,12 @@ $('pTrack').onclick = e => {
   const btn = e.target.closest('[data-a]'), it = play.list[play.i]; if (!btn || !it) return;
   const a = btn.dataset.a;
   if (a === 'back') { if (play.back != null) play.i = play.back; play.back = null; return showPlay(); }
-  if (a === 'copy') { play.i = +btn.dataset.i; return showPlay(); }
-  if (a === 'dice') { play.dice = play.dice ? null : { n: 1, target: 4, last: null }; return renderTrack(); }
+  if (a === 'copy') { play.i = +btn.dataset.i; play.dice = null; play.spell = null; return showPlay(); }
+  if (a === 'dice') {
+    if (play.dice) play.dice = null;
+    else { play.spell = null; play.dice = { n: 1, target: 4, last: null }; }
+    return renderTrack();
+  }
   if (a === 'roll') {
     const d = play.dice || { n: 1, target: 4 };
     const n = Math.max(1, Math.min(40, Number(d.n) || 1));
@@ -1046,12 +1070,9 @@ $('pTrack').onclick = e => {
     play.dice = d; return renderTrack();
   }
   if (a === 'spells') {
-    if (it.ref && play.back != null) { play.i = play.back; play.back = null; play.dice = null; return showPlay(); }
     if (it.ref) return;
-    play.dice = null;
-    const pk = pickBlock(it, spellBlocks());
-    if (pk) return openSpell(pk);
-    play.spellMiss = true; return renderTrack();
+    if (play.spell) { play.spell = null; return renderTrack(); }
+    return openSpellPanel(it);
   }
   if (it.ref) return;
   if (a === 'destroy') { play.dead.has(it.sid) ? play.dead.delete(it.sid) : play.dead.add(it.sid); savePlaySoon(); return showPlay(); }
