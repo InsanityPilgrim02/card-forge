@@ -153,7 +153,7 @@ button{touch-action:manipulation}
 #pToc .x em{text-decoration:line-through;opacity:.55}
 #pToc .rhd{justify-content:space-between;background:#333}
 #pToc .rst{background:#444;justify-content:center;margin-top:6px}
-#pTrack .mdls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-height:92px;overflow:auto;width:100%}
+#pTrack .mdls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-height:none;overflow:visible;width:100%;flex:none}
 .mdl{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
 .mdl.gone{opacity:.45}.mdl>span{color:var(--mute);font-size:12px;width:22px}
 #pTrack .mdl button{padding:6px 12px;font-size:17px;line-height:1}
@@ -907,29 +907,31 @@ const pickBlock = (it, bl) => {
   }
   return best;
 };
-const openSpell = b => { play.back = play.i; play.i = b.idx; showPlay(); };
+const openSpell = b => { play.dice = null; play.back = play.i; play.i = b.idx; showPlay(); };
 function renderTrack() {
   const it = play.list[play.i], t = $('pTrack');
   const blocks = spellBlocks();
-  if (it.ref) { t.innerHTML = play.back != null ? '<button data-a="back">← Back to unit</button>' : '<span class="pmute">Reference card</span>'; return; }
-  if (play.spellMiss) {
-    play.spellMiss = false;
-    t.innerHTML = '<span class="pmute">No spell list matches this faction — name a rules card like “Prime Brothers Spells”</span>';
-    setTimeout(() => renderTrack(), 2200);
+  const dead = play.dead.has(it.sid);
+  const spellsBtn = (it.caster && blocks.length) || (it.ref && play.back != null)
+    ? `<div class="pspells"><button data-a="spells" class="${it.ref && play.back != null ? 'on' : ''}">✦ Spells</button></div>`
+    : '';
+  const diceBtn = !it.ref
+    ? `<div class="pdice"><button type="button" data-a="dice" class="${play.dice ? 'on' : ''}">Dice</button></div>`
+    : '';
+  const destroyBtn = it.ref ? '' : `<button data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore' : 'Destroy'}</button>`;
+
+  if (it.ref) {
+    t.innerHTML = play.back != null
+      ? `<div class="pwounds"><span class="pmute">Spell list — tap ✦ Spells again to return</span></div><div class="pbot">${spellsBtn}</div>`
+      : `<div class="pwounds"><span class="pmute">Reference card</span></div><div class="pbot"></div>`;
     return;
   }
-  const keep = t.querySelector('.mdls')?.scrollTop || 0, dead = play.dead.has(it.sid);
-  let rows = '', head = '';
-  if (it.max) {   // only units with Tough get wound tracking, one box per model
-    const arr = modelsOf(it);
-    rows = arr.map((l, m) => {
-      const left = it.max - l;
-      return `<div class="mdl${left < 1 ? ' gone' : ''}"><span>M${m + 1}</span>
-        <div class="pips">${Array.from({ length: it.max }, (_, k) => `<i class="${k < left ? 'on' : ''}"></i>`).join('')}</div>
-        <button data-a="wound" data-m="${m}" ${left < 1 || dead ? 'disabled' : ''}>−</button>
-        <button data-a="heal" data-m="${m}" ${l < 1 || dead ? 'disabled' : ''}>+</button></div>`;
-    }).join('');
-    head = `<b class="${aliveOf(it) < 1 ? 'out' : ''}">Models ${aliveOf(it)} / ${it.n} · Tough ${it.max} each</b>`;
+  if (play.spellMiss) {
+    play.spellMiss = false;
+    t.innerHTML = `<div class="pwounds"><span class="pmute">No spell list matches this faction — name a rules card like “Prime Brothers Spells”</span></div>
+      <div class="pbot">${diceBtn}${destroyBtn}${spellsBtn}</div>`;
+    setTimeout(() => renderTrack(), 2200);
+    return;
   }
   if (play.dice) {
     const d = play.dice;
@@ -941,27 +943,34 @@ function renderTrack() {
         <label>Dice <input type="number" min="1" max="40" value="${d.n}" data-dn></label>
         <label>Pass on <select data-dt>${[2,3,4,5,6].map(n => `<option value="${n}"${n===d.target?' selected':''}>${n}+</option>`).join('')}</select></label>
         <button type="button" data-a="roll">Roll</button>
-        <button type="button" data-a="dice-close">Back</button>
       </div>
       ${res}
     </div></div>
-    <div class="pbot"><div class="pdice"><button type="button" data-a="dice">Dice</button></div>
-      <button data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore unit' : 'Destroy unit'}</button>${''}</div>`;
+    <div class="pbot">${diceBtn}${destroyBtn}${spellsBtn}</div>`;
     return;
   }
-  const spells = it.caster && blocks.length
-    ? `<div class="pspells"><button data-a="spells">✦ Spells</button></div>`
-    : '';
-  const sibs = !it.ref && it.copies > 1
+  const keep = t.querySelector('.pwounds')?.scrollTop || 0;
+  let rows = '', head = '';
+  if (it.max) {
+    const arr = modelsOf(it);
+    rows = arr.map((l, m) => {
+      const left = it.max - l;
+      return `<div class="mdl${left < 1 ? ' gone' : ''}"><span>M${m + 1}</span>
+        <div class="pips">${Array.from({ length: it.max }, (_, k) => `<i class="${k < left ? 'on' : ''}"></i>`).join('')}</div>
+        <button data-a="wound" data-m="${m}" ${left < 1 || dead ? 'disabled' : ''}>−</button>
+        <button data-a="heal" data-m="${m}" ${l < 1 || dead ? 'disabled' : ''}>+</button></div>`;
+    }).join('');
+    head = `<b class="${aliveOf(it) < 1 ? 'out' : ''}">Models ${aliveOf(it)} / ${it.n} · Tough ${it.max} each</b>`;
+  }
+  const sibs = it.copies > 1
     ? play.list.map((x, k) => ({ x, k })).filter(o => o.x.baseSid === it.baseSid)
     : [];
   const unitNav = sibs.length > 1
     ? `<div class="ucopies">${sibs.map(o => `<button type="button" data-a="copy" data-i="${o.k}" class="${o.k === play.i ? 'on' : ''}">Unit ${o.x.copy}</button>`).join('')}</div>`
     : '';
-  const diceBtn = it.ref ? '' : `<div class="pdice"><button type="button" data-a="dice">Dice</button></div>`;
   t.innerHTML = `<div class="pwounds">${unitNav}${head}${rows ? `<div class="mdls">${rows}</div>` : ''}</div>
-    <div class="pbot">${diceBtn}<button data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore unit' : 'Destroy unit'}</button>${spells}</div>`;
-  const ml = t.querySelector('.mdls'); if (ml) ml.scrollTop = keep;
+    <div class="pbot">${diceBtn}${destroyBtn}${spellsBtn}</div>`;
+  const pw = t.querySelector('.pwounds'); if (pw) pw.scrollTop = keep;
 }
 
 function renderToc() {
@@ -1022,8 +1031,7 @@ $('pTrack').onclick = e => {
   const a = btn.dataset.a;
   if (a === 'back') { if (play.back != null) play.i = play.back; play.back = null; return showPlay(); }
   if (a === 'copy') { play.i = +btn.dataset.i; return showPlay(); }
-  if (a === 'dice') { play.dice = play.dice || { n: 1, target: 4, last: null }; return renderTrack(); }
-  if (a === 'dice-close') { play.dice = null; return renderTrack(); }
+  if (a === 'dice') { play.dice = play.dice ? null : { n: 1, target: 4, last: null }; return renderTrack(); }
   if (a === 'roll') {
     const d = play.dice || { n: 1, target: 4 };
     const n = Math.max(1, Math.min(40, Number(d.n) || 1));
@@ -1037,12 +1045,15 @@ $('pTrack').onclick = e => {
     };
     play.dice = d; return renderTrack();
   }
-  if (it.ref) return;
   if (a === 'spells') {
+    if (it.ref && play.back != null) { play.i = play.back; play.back = null; play.dice = null; return showPlay(); }
+    if (it.ref) return;
+    play.dice = null;
     const pk = pickBlock(it, spellBlocks());
     if (pk) return openSpell(pk);
     play.spellMiss = true; return renderTrack();
   }
+  if (it.ref) return;
   if (a === 'destroy') { play.dead.has(it.sid) ? play.dead.delete(it.sid) : play.dead.add(it.sid); savePlaySoon(); return showPlay(); }
   const arr = [...modelsOf(it)], m = +btn.dataset.m;
   arr[m] = a === 'wound' ? Math.min(it.max, arr[m] + 1) : Math.max(0, arr[m] - 1);
