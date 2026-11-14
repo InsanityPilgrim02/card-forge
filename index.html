@@ -121,6 +121,17 @@ button{touch-action:manipulation}
 #pStage{flex:1;position:relative;overflow:hidden;touch-action:pan-y;min-height:0}
 .pwrap{position:absolute;left:50%;top:50%;transform-origin:center}
 .pwrap .card{box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.dice-stage{width:var(--cw);height:var(--ch);background:#161a20;color:#e8eaee;display:flex;align-items:center;justify-content:center;border-radius:3mm;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.dice-stage-in{width:100%;padding:5mm 4mm;text-align:center;box-sizing:border-box}
+.dice-stage-in h2{margin:0 0 4mm;font:800 5mm/1.1 system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
+.dice-stage .drow{display:flex;flex-wrap:wrap;gap:3mm;align-items:center;justify-content:center;margin-bottom:4mm}
+.dice-stage label{font-size:3.2mm;color:var(--mute)}
+.dice-stage input[type=number],.dice-stage select{padding:2mm 2.5mm;font-size:3.6mm;background:var(--panel);color:#fff;border:1px solid var(--line);border-radius:1.5mm}
+.dice-stage input[type=number]{width:12mm}
+.dice-stage button[data-a=roll]{padding:2.5mm 5mm;font-size:3.8mm;font-weight:700}
+.dice-stage .dres{font-size:3.6mm;line-height:1.4}
+.dice-stage .dres b{color:var(--amber);font-size:5mm}
+.dice-stage .drolls{margin-top:2mm;font-size:2.8mm;color:var(--mute);word-break:break-word}
 .pwrap.dead .card{filter:grayscale(1) brightness(.55)}
 .pwrap.dead::after{content:"DESTROYED";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-18deg);padding:6px 14px;border:4px solid #e0443e;border-radius:8px;color:#e0443e;font:900 34px/1 Arial,sans-serif;letter-spacing:.1em;background:rgba(0,0,0,.6)}
 .pnav{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:44px;height:84px;font-size:34px;padding:0;background:rgba(0,0,0,.6);color:#fff}
@@ -853,29 +864,60 @@ function linkRules(root) {
       return L.has(k) ? `<span class="wr" data-tip="${esc(k)}">${esc(t.trim())}</span>` : esc(t.trim()); }).join(', ') + esc(txt.slice(j));
   });
 }
+function diceCardHtml() {
+  const d = play.dice || { n: 1, target: 4, last: null };
+  const res = d.last
+    ? `<div class="dres"><b>${d.last.pass}</b> success${d.last.pass === 1 ? '' : 'es'} on ${d.n}d6 · ${d.target}+<br>
+        <span>1s: <b>${d.last.ones}</b> · 6s: <b>${d.last.sixes}</b></span>
+        <div class="drolls">[${d.last.rolls.join(', ')}]</div></div>`
+    : '<div class="pmute">Set dice &amp; target, then Roll</div>';
+  return `<article class="card dice-stage"><div class="dice-stage-in">
+    <h2>Dice</h2>
+    <div class="drow">
+      <label>Dice <input type="number" min="1" max="40" value="${d.n}" data-dn></label>
+      <label>Pass on <select data-dt>${[2,3,4,5,6].map(n => `<option value="${n}"${n === d.target ? ' selected' : ''}>${n}+</option>`).join('')}</select></label>
+      <button type="button" data-a="roll">Roll</button>
+    </div>
+    ${res}
+  </div></article>`;
+}
 function showPlay() {
-  const it = play.list[play.i], clone = it.el.cloneNode(true);
   hideTip(); play.pick = false;
-  clone.querySelectorAll('.tool,input').forEach(e => e.remove());
-  clone.querySelectorAll('.ed').forEach(e => e.classList.remove('ed'));
-  linkRules(clone);
+  // Unit index for chrome (pos / dead) when dice or spells overlay is active
+  const unitIdx = (play.back != null && play.list[play.back] && !play.list[play.back].ref) ? play.back : play.i;
+  const unit = play.list[unitIdx];
   const wrap = document.createElement('div');
-  wrap.className = 'pwrap' + (play.dead.has(it.sid) ? ' dead' : '');
-  wrap.appendChild(clone); $('pStage').replaceChildren(wrap);
+
+  if (play.dice && unit && !unit.ref) {
+    wrap.className = 'pwrap';
+    wrap.innerHTML = diceCardHtml();
+    $('pStage').replaceChildren(wrap);
+  } else {
+    const it = play.list[play.i], clone = it.el.cloneNode(true);
+    clone.querySelectorAll('.tool,input').forEach(e => e.remove());
+    clone.querySelectorAll('.ed').forEach(e => e.classList.remove('ed'));
+    linkRules(clone);
+    wrap.className = 'pwrap' + (play.dead.has(it.sid) ? ' dead' : '');
+    wrap.appendChild(clone);
+    $('pStage').replaceChildren(wrap);
+  }
   renderTrack(); renderToc(); fitPlay();
+  const it = unit || play.list[play.i];
   const grp = play.list.map((x, k) => {
-    if (x.ref !== it.ref) return -1;
-    if (!x.ref && x.copies > 1 && x.copy !== 1) return -1; // only count primary copies in swipe group
+    if (x.ref !== false && x.ref !== it.ref) return -1;
+    if (it.ref) return x.ref ? k : -1;
+    if (x.ref) return -1;
+    if (x.copies > 1 && x.copy !== 1) return -1;
     return k;
   }).filter(k => k >= 0);
-  // If viewing copy 2+, still show position of that unit family
-  let pos = grp.indexOf(play.i);
+  let pos = grp.indexOf(unitIdx);
   if (pos < 0 && !it.ref) {
     const prim = play.list.findIndex(x => !x.ref && x.baseSid === it.baseSid && x.copy === 1);
     pos = grp.indexOf(prim);
   }
-  $('pPos').textContent = `${it.ref ? 'Ref ' : ''}${pos + 1} / ${grp.length} · ${it.name}`;
-  $('pPrev').disabled = pos <= 0; $('pNext').disabled = pos < 0 || pos >= grp.length - 1;
+  $('pPos').textContent = play.dice ? `Dice · ${it.name}` : `${it.ref ? 'Ref ' : ''}${pos + 1} / ${grp.length} · ${it.name}`;
+  $('pPrev').disabled = play.dice || pos <= 0;
+  $('pNext').disabled = play.dice || pos < 0 || pos >= grp.length - 1;
 }
 function fitPlay() {
   const st = $('pStage'), w = st.firstChild; if (!w) return;
@@ -943,21 +985,6 @@ function renderTrack() {
     return;
   }
 
-  // Dice panel (still under the unit card / spell card on stage)
-  if (play.dice && !spellOn) {
-    const d = play.dice;
-    const res = d.last ? `<div class="dres"><b>${d.last.pass}</b> success${d.last.pass === 1 ? '' : 'es'} on ${d.n}d6 · ${d.target}+<br>
-      <span>1s: <b>${d.last.ones}</b> · 6s: <b>${d.last.sixes}</b></span>
-      <div class="drolls">[${d.last.rolls.join(', ')}]</div></div>` : '<span class="pmute">Set dice &amp; target, then Roll</span>';
-    t.innerHTML = `<div class="pbody">${unitNav}<div class="diceui">
-      <div class="drow">
-        <label>Dice <input type="number" min="1" max="40" value="${d.n}" data-dn></label>
-        <label>Pass on <select data-dt>${[2,3,4,5,6].map(n => `<option value="${n}"${n===d.target?' selected':''}>${n}+</option>`).join('')}</select></label>
-        <button type="button" data-a="roll">Roll</button>
-      </div>${res}</div></div>${pbot}`;
-    return;
-  }
-
   const keep = t.querySelector('.pbody')?.scrollTop || 0;
   let rows = '', head = '';
   if (it.max) {
@@ -972,7 +999,7 @@ function renderTrack() {
     head = `<b class="${aliveOf(it) < 1 ? 'out' : ''}">Models ${aliveOf(it)} / ${it.n} · Tough ${it.max} each</b>`;
   }
   // Unit selector + wounds share one scroll box; bottom bar stays compact
-  t.innerHTML = `<div class="pbody">${unitNav}${head}${rows ? `<div class="mdls">${rows}</div>` : ''}${spellOn ? '<span class="pmute">Spell list on card — tap Spells to return</span>' : ''}</div>${pbot}`;
+  t.innerHTML = `<div class="pbody">${unitNav}${head}${rows ? `<div class="mdls">${rows}</div>` : ''}${play.dice ? '<span class="pmute">Dice on card — tap Dice to return</span>' : spellOn ? '<span class="pmute">Spell list on card — tap Spells to return</span>' : ''}</div>${pbot}`;
   const body = t.querySelector('.pbody'); if (body) body.scrollTop = keep;
 }
 
@@ -1037,9 +1064,10 @@ $('pTrack').onclick = e => {
   if (a === 'back') { if (play.back != null) play.i = play.back; play.back = null; return showPlay(); }
   if (a === 'copy') { const k = +btn.dataset.i; play.dice = null; if (play.back != null) { play.back = k; } else play.i = k; return showPlay(); }
   if (a === 'dice') {
-    if (play.dice) play.dice = null;
-    else { play.spell = null; play.dice = { n: 1, target: 4, last: null }; }
-    return renderTrack();
+    if (play.dice) { play.dice = null; return showPlay(); }
+    if (play.back != null) { play.i = play.back; play.back = null; }
+    play.dice = { n: 1, target: 4, last: null };
+    return showPlay();
   }
   if (a === 'roll') {
     const d = play.dice || { n: 1, target: 4 };
@@ -1052,7 +1080,7 @@ $('pTrack').onclick = e => {
       ones: rolls.filter(r => r === 1).length,
       sixes: rolls.filter(r => r === 6).length
     };
-    play.dice = d; return renderTrack();
+    play.dice = d; return showPlay();
   }
   if (a === 'spells') {
     // Toggle: show matching spell ref card on stage, keep this unit's bottom UI
