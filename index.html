@@ -18,6 +18,7 @@
 --cRefTopBg:#000000;--cRefTopFg:#ffffff;--cRefBody:#fafafa;--cRefName:#111111;--cRefDesc:#222222;
 --ink:#14161a;--panel:#1e2229;--line:#343a44;--mute:#9aa3b0;--amber:#f2a93b;--bench:#2a2f38}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bench);color:#e8eaee;font:14px/1.4 "Trebuchet MS","Segoe UI",system-ui,sans-serif}
 header{position:sticky;top:0;z-index:20;background:var(--ink);border-bottom:2px solid var(--amber);display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px}
 header h1{margin:0;font:800 17px/1 "Arial Narrow","Franklin Gothic Medium",Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
@@ -25,25 +26,20 @@ header input[type=text]{flex:1;min-width:240px;padding:8px 10px;border:1px solid
 .urlwrap{position:relative;flex:1;min-width:240px;display:flex}
 .urlwrap input{flex:1;min-width:0}
 #urlDrop{position:absolute;left:0;right:0;top:100%;z-index:30;margin-top:4px;max-height:min(320px,50vh);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
-#urlDrop[hidden]{display:none!important}
-#urlDrop button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:10px 12px;border:0;border-radius:0;border-bottom:1px solid var(--line);background:transparent;color:#e8eaee;font-weight:600;cursor:pointer}
-#urlDrop button:last-child{border-bottom:0}
+#urlDrop button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border:0;border-radius:0;background:transparent;color:#e8eaee;font-weight:600;text-align:left}
 #urlDrop button:hover{background:var(--bench)}
 #urlDrop b{font-weight:700;color:#fff}
 #urlDrop small{font-weight:500;color:var(--mute);font-size:11px}
-#urlDrop .muted{color:var(--mute);font-weight:600}
 #urlDrop .li{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
 #urlDrop .li:last-of-type{border-bottom:0}
-#urlDrop .li-main{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;border:0;border-radius:0;background:transparent;color:#e8eaee;font-weight:600;cursor:pointer}
-#urlDrop .li-main:hover{background:var(--bench)}
-#urlDrop .li-x{flex:none;width:44px;border:0;border-radius:0;background:transparent;color:#ff7b7b;font-size:16px;font-weight:800;cursor:pointer}
+#urlDrop .li-main{flex:1}
+#urlDrop .li-x{flex:none;width:44px;color:#ff7b7b;font-size:16px;font-weight:800}
 #urlDrop .li-x:hover{background:rgba(217,69,63,.25)}
-#urlDrop .li-clear{width:100%;border-bottom:0}
+#urlDrop .li-clear{width:100%;color:var(--mute)}
 .imgmenu{position:absolute;top:1mm;right:1mm;z-index:6;display:flex;flex-direction:column;gap:4px;background:rgba(0,0,0,.88);border-radius:5px;padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.4)}
-.imgmenu[hidden]{display:none!important}
 .imgmenu button{padding:6px 10px;font-size:11px;background:var(--amber);color:#111}
-.ucopies{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;margin:2px 0 4px;padding:4px;box-sizing:border-box}
-.ucopies button{padding:6px 12px;font-size:13px;background:var(--panel);color:#fff;border:1px solid var(--line);box-sizing:border-box}
+.ucopies{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;margin:2px 0 4px;padding:4px}
+.ucopies button{padding:6px 12px;font-size:13px;background:var(--panel);color:#fff;border:1px solid var(--line)}
 .ucopies button.on{box-shadow:0 0 0 2px var(--amber);background:#333;border-color:var(--amber)}
 .camfeed{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;background:#000;pointer-events:none}
 .cambar{position:absolute;left:0;right:0;bottom:0;z-index:6;display:flex;gap:6px;justify-content:center;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,.75))}
@@ -51,11 +47,8 @@ header input[type=text]{flex:1;min-width:240px;padding:8px 10px;border:1px solid
 .cambar .danger{background:#d9453f;color:#fff}
 .card.cam-on .tool,.card.cam-on .imgmenu{display:none!important}
 .card.cam-on .art{opacity:0}
-.card.cam-on .ov,.card.cam-on .top,.card.cam-on .rb{position:relative;z-index:2}
-.ref .body{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
-.ref .top,.ref .rb{position:relative;z-index:1}
-.ref .rb{background:color-mix(in srgb, var(--cRefBody) 88%, transparent)}
-button{border:0;border-radius:4px;padding:8px 14px;font-weight:700;cursor:pointer;background:var(--amber);color:#111}
+.card.cam-on .ov{z-index:2}
+button{border:0;border-radius:4px;padding:8px 14px;font-weight:700;cursor:pointer;background:var(--amber);color:#111;touch-action:manipulation}
 button:disabled{opacity:.4;cursor:default}
 .wrap{max-width:1200px;margin:0 auto;padding:12px 16px}
 #status{min-height:1.4em;color:var(--mute);font-size:13px}
@@ -76,15 +69,13 @@ textarea{width:100%;min-height:80px;margin-top:6px;padding:8px;background:var(--
 .print-only{display:none}
 .ctl{width:var(--cw);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:5px 8px;font-size:11px;color:var(--mute)}
 .ctl div{display:flex;align-items:center;gap:6px}.ctl input[type=range]{flex:1;min-width:0}
-.ctl input[type=number]{width:3.6em;background:var(--ink);color:#fff;border:1px solid var(--line)}
+.ctl input[type=number]{flex:none;width:3.6em;background:var(--ink);color:#fff;border:1px solid var(--line)}
 .ctl span{flex:0 0 44px}
 .ctl button{padding:3px 8px;font-size:11px}
 .ctl .rm{margin-left:auto;white-space:nowrap;padding:3px 6px;font-size:10px}
-.ctl input[type=number]{flex:none}
 
 /* ---- the card ---- */
 .card{width:var(--cw);height:var(--ch);border:.35mm solid var(--cCardBd);border-radius:3mm;overflow:hidden;position:relative;background:var(--cCardBg);color:#111;display:flex;flex-direction:column;flex:none;break-inside:avoid;box-shadow:0 3px 10px rgba(0,0,0,.35)}
-.top{background:var(--cRefTopBg);color:var(--cRefTopFg);display:flex;justify-content:space-between;align-items:center;gap:1.5mm;padding:1.6mm 2.2mm;min-height:7.5mm;font-weight:700;font-size:var(--fsName)}
 .namebox{display:flex;justify-content:space-between;align-items:center;gap:1.5mm;background:var(--cNameBg);border:.25mm solid var(--cNameBd);border-radius:3mm;padding:.9mm 2.2mm;font-weight:700;font-size:var(--fsName);color:var(--cNameFg);line-height:1.2}
 .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .body{position:relative;flex:1;min-height:0;overflow:hidden}
@@ -103,19 +94,16 @@ textarea{width:100%;min-height:80px;margin-top:6px;padding:8px;background:var(--
 .tool{position:absolute;top:1mm;right:1mm;z-index:5;opacity:0;padding:3px 7px;font-size:10px;background:rgba(0,0,0,.75);color:#fff}
 .card:hover .tool{opacity:1}
 .ed{cursor:pointer}.ed:hover{background:rgba(255,220,80,.45);color:#111}
-
 body.bordered .card{border:var(--bw) solid #000}
+
 /* reference cards */
-.ref .top{flex:none;justify-content:center;align-items:center;min-height:7.5mm;margin:0;padding:1.6mm 2.2mm;width:100%;box-sizing:border-box;background:var(--cRefTopBg)!important;color:var(--cRefTopFg);border:0;border-radius:0;font-size:var(--rt);line-height:1.2;font-weight:700;position:relative;z-index:2}
-.ref .rb{margin-top:0;position:relative;z-index:2}
-.rb{flex:1;min-height:0;overflow:hidden;padding:.8mm 1.3mm 1mm;display:flex;flex-direction:column;gap:.28mm;background:var(--cRefBody)}
-.ref .body > .art{z-index:0}
+.ref .body{display:flex;flex-direction:column}
+.ref .top{display:flex;flex:none;justify-content:center;align-items:center;gap:1.5mm;min-height:7.5mm;padding:1.6mm 2.2mm;width:100%;background:var(--cRefTopBg);color:var(--cRefTopFg);font-size:var(--rt);line-height:1.2;font-weight:700;position:relative;z-index:2}
+.rb{flex:1;min-height:0;overflow:hidden;padding:.8mm 1.3mm 1mm;display:flex;flex-direction:column;gap:.28mm;background:color-mix(in srgb,var(--cRefBody) 88%,transparent);position:relative;z-index:2}
 .re{flex:none;border-bottom:.1mm solid #e4e4e4;padding-bottom:.2mm}.re:last-child{border:0}
 .re b{display:block;font-size:var(--rn);font-weight:800;line-height:1.08;color:var(--cRefName)}
 .re p{margin:.05mm 0 0;font-size:var(--rd);line-height:1.12;color:var(--cRefDesc)}
 
-[hidden]{display:none!important}
-button{touch-action:manipulation}
 /* play mode */
 #play{position:fixed;inset:0;z-index:100;background:#0d0f12;display:flex;flex-direction:column}
 .pbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--ink);border-bottom:2px solid var(--amber)}
@@ -124,13 +112,13 @@ button{touch-action:manipulation}
 .pwrap{position:absolute;left:50%;top:50%;transform-origin:center}
 .pwrap .card{box-shadow:0 8px 30px rgba(0,0,0,.6)}
 .dice-stage{width:var(--cw);height:var(--ch);background:#161a20;color:#e8eaee;display:flex;align-items:center;justify-content:center;border-radius:3mm;box-shadow:0 8px 30px rgba(0,0,0,.6)}
-.dice-stage-in{width:100%;padding:5mm 4mm;text-align:center;box-sizing:border-box}
+.dice-stage-in{width:100%;padding:5mm 4mm;text-align:center}
 .dice-stage-in h2{margin:0 0 4mm;font:800 5mm/1.1 system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
 .dice-stage .drow{display:flex;flex-wrap:wrap;gap:3mm;align-items:center;justify-content:center;margin-bottom:4mm}
 .dice-stage label{font-size:3.2mm;color:var(--mute)}
 .dice-stage input[type=number],.dice-stage select{padding:2mm 2.5mm;font-size:3.6mm;background:var(--panel);color:#fff;border:1px solid var(--line);border-radius:1.5mm}
 .dice-stage input[type=number]{width:12mm}
-.dice-stage button[data-a=roll]{padding:2.5mm 5mm;font-size:3.8mm;font-weight:700}
+.dice-stage button[data-a=roll]{padding:2.5mm 5mm;font-size:3.8mm}
 .dice-stage .dres{font-size:3.6mm;line-height:1.4}
 .dice-stage .dres b{color:var(--amber);font-size:5mm}
 .dice-stage .drolls{margin-top:2mm;font-size:2.8mm;color:var(--mute);word-break:break-word}
@@ -140,26 +128,22 @@ button{touch-action:manipulation}
 #pPrev{left:4px}#pNext{right:4px}
 .pnav:disabled{opacity:.15}
 #pTrack{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:6px;padding:8px 10px;background:var(--ink);border-top:1px solid var(--line);height:min(200px,36vh);overflow:hidden;flex:none}
-#pTrack .pbody{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;justify-content:flex-start;padding:4px 2px;box-sizing:border-box}
+#pTrack .pbody{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:4px 2px}
 #pTrack .pbot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;column-gap:8px;width:100%;flex:none}
 #pTrack .pbot>.pdice{grid-column:1;justify-self:end;min-width:0;display:flex;justify-content:flex-end}
 #pTrack .pbot>[data-a=destroy]{grid-column:2;justify-self:center;min-width:0}
 #pTrack .pbot>.pspells{grid-column:3;justify-self:start;min-width:0;display:flex;justify-content:flex-start}
 #pTrack .pbot>.pempty{grid-column:3;min-width:0}
-#pTrack .diceui{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;padding:2px 0;color:#e8eaee;font-size:13px}
-#pTrack .diceui .drow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:center}
-#pTrack .diceui label{color:var(--mute);font-size:11px}
-#pTrack .diceui input[type=number]{width:3.2em;padding:4px 6px;background:var(--panel);color:#fff;border:1px solid var(--line);border-radius:4px}
-#pTrack .diceui select{padding:4px 6px;background:var(--panel);color:#fff;border:1px solid var(--line);border-radius:4px}
-#pTrack .diceui .dres{text-align:center;line-height:1.35}
-#pTrack .diceui .dres b{color:var(--amber)}
-#pTrack .diceui .drolls{font-size:11px;color:var(--mute);max-width:100%;word-break:break-word}
-#pTrack .pbot > button,#pTrack .pdice button,#pTrack .pspells > button{width:6.75em;height:42px;padding:0 10px;font-size:16px;font-weight:700;line-height:1;box-sizing:border-box;text-align:center;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
-#pTrack .pdice button.on,#pTrack .pspells > button.on{box-shadow:0 0 0 2px var(--amber);background:#333}
-#pTrack .danger,.danger{background:#d9453f;color:#fff}
+#pTrack .pbot>button,#pTrack .pdice button,#pTrack .pspells>button{width:6.75em;height:42px;padding:0 10px;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+#pTrack .pdice button.on,#pTrack .pspells>button.on{box-shadow:0 0 0 2px var(--amber);background:#333}
+.danger{background:#d9453f;color:#fff}
 .pips{display:flex;gap:5px;flex-wrap:wrap;max-width:100%}
 .pips i{width:16px;height:16px;border-radius:50%;border:2px solid var(--amber)}.pips i.on{background:var(--amber)}
 .out{color:#ff7b7b}.pmute{color:var(--mute)}
+#pTrack .mdls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;flex:none}
+.mdl{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+.mdl.gone{opacity:.45}.mdl>span{color:var(--mute);font-size:12px;width:22px}
+#pTrack .mdl button{padding:6px 12px;font-size:17px;line-height:1}
 #pToc{position:absolute;z-index:8;left:0;top:54px;bottom:0;width:min(320px,85vw);overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:6px;display:flex;flex-direction:column;gap:4px}
 #pToc button{display:flex;gap:8px;align-items:center;text-align:left;background:var(--ink);color:#fff;font-weight:600;padding:9px 10px}
 #pToc .cur{outline:2px solid var(--amber)}
@@ -167,10 +151,6 @@ button{touch-action:manipulation}
 #pToc .x em{text-decoration:line-through;opacity:.55}
 #pToc .rhd{justify-content:space-between;background:#333}
 #pToc .rst{background:#444;justify-content:center;margin-top:6px}
-#pTrack .mdls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-height:none;overflow:visible;width:100%;flex:none}
-.mdl{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
-.mdl.gone{opacity:.45}.mdl>span{color:var(--mute);font-size:12px;width:22px}
-#pTrack .mdl button{padding:6px 12px;font-size:17px;line-height:1}
 .rl,.wr{cursor:help}.wr{border-bottom:.2mm dotted #333}
 #pTip{position:fixed;z-index:120;max-width:min(340px,90vw);background:#fff;color:#111;border-radius:8px;padding:8px 11px;box-shadow:0 6px 24px rgba(0,0,0,.6);pointer-events:none;font-size:13px;line-height:1.35}
 #pTip b{display:block;margin-bottom:2px}#pTip p{margin:0}
@@ -227,6 +207,7 @@ button{touch-action:manipulation}
 const API = 'https://army-forge.onepagerules.com/api/tts';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clampInt = (v, lo, hi, d) => Math.max(lo, Math.min(hi, parseInt(v) || d));
 
 const FIELDS = [['cw','Width mm',63,40,100,.5],['ch','Height mm',88,50,140,.5],['fsName','Name text',2.8,1.5,6,.1],
   ['fsRules','Rules text',2,1.2,5,.1],['fsWpn','Weapon text',2.05,1.2,5,.1],['fsFac','Faction text',1.9,1,5,.1],['bw','Border mm',3,.5,8,.5],
@@ -239,7 +220,7 @@ const COLORS = [
   ['cWpnBg','Box','#ffffff'],['cWpnFg','Text','#111111'],['cWpnBd','Edge','#2e2e2e'],
   ['cStatBg','Box','#ffffff'],['cStatLb','Label','#444444'],['cStatVl','Value','#111111'],['cStatBd','Edge','#222222'],
   ['cRefTopBg','Title bg','#000000'],['cRefTopFg','Title text','#ffffff'],['cRefBody','Body','#fafafa'],['cRefName','Name','#111111'],['cRefDesc','Text','#222222']];
-// size ids + color ids per section
+// size ids + color ids per settings section
 const GROUPS = [
   ['Card',['cw','ch','bw'],['cCardBg','cCardBd']],
   ['Name',['fsName'],['cNameBg','cNameFg','cNameBd']],
@@ -250,54 +231,99 @@ const GROUPS = [
   ['Reference cards',['rt','rn','rd'],['cRefTopBg','cRefTopFg','cRefBody','cRefName','cRefDesc']]];
 const REFS = [['core','Core Special Rules'],['faction','Faction Special Rules'],['spells','Faction Spells']];
 const TR = [['o','Opacity',0,100],['x','Horiz',-50,50],['y','Vert',-50,50],['z','Zoom',50,250]];
-const fieldOf = id => FIELDS.find(f => f[0] === id);
-const colorOf = id => COLORS.find(c => c[0] === id);
 
-let army = null;
-const bookNames = new Map(); // armyId -> faction name from Army Forge book API
-const spellMap = new Map(); // armyId -> spell card key
-const ruleNames = new Map(), wpnNames = new Map(); // key: armyId::name -> custom name (per faction)
+let army = null, listId = null;
+const bookNames = new Map();                          // armyId -> inferred faction name
+const ruleNames = new Map(), wpnNames = new Map();    // armyId::name -> custom name (per faction)
 const imgs = new Map(), qty = new Map(), names = new Map(), facs = new Map();
-const refText = {core:'', faction:'', spells:''}, refTitles = new Map(); // key 'kind:blockIndex' -> custom card title
+const refText = {core:'', faction:'', spells:''}, refTitles = new Map();   // refTitles key 'kind:blockIndex'
 
-// Images persist in IndexedDB, keyed by base unit name, so they return for any list with the same unit
+// ---------- storage (IndexedDB) ----------
+// keys: <unit name> image · ref:<kind>:<n> ref-card image · __text · __lists · __list:<id> · __state:<id>
 const idb = (() => {
   let p; const open = () => p || (p = new Promise((ok, no) => { const r = indexedDB.open('opr-card-forge', 1);
     r.onupgradeneeded = () => r.result.createObjectStore('imgs'); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }));
   const tx = async (mode, fn) => { const db = await open(); return new Promise((ok, no) => { const t = db.transaction('imgs', mode), rq = fn(t.objectStore('imgs'));
     t.oncomplete = () => ok(rq.result); t.onerror = () => no(t.error); }); };
   return { get: k => tx('readonly', s => s.get(k)).catch(() => null), set: (k, v) => tx('readwrite', s => s.put(v, k)).catch(() => {}),
-    del: k => tx('readwrite', s => s.delete(k)).catch(() => {}) };
+    del: k => tx('readwrite', s => s.delete(k)).catch(() => {}),
+    entries: pre => open().then(db => new Promise((ok, no) => {   // all [key, value] pairs under a prefix, one transaction
+      const t = db.transaction('imgs'), s = t.objectStore('imgs'), r = IDBKeyRange.bound(pre, pre + '\uffff'), k = s.getAllKeys(r), v = s.getAll(r);
+      t.oncomplete = () => ok(k.result.map((x, i) => [x, v.result[i]])); t.onerror = () => no(t.error); })).catch(() => []) };
 })();
 const imgKey = u => String(u.genericName || u.name || '').toLowerCase().trim();
-const saveImg = u => { const im = imgs.get(sidOf(u)); if (im && imgKey(u)) idb.set(imgKey(u), im); };
+const unitBySid = sid => army?.units?.find(u => String(sidOf(u)) === sid);
+function saveImgFor(sid) {   // unit images are shared by unit name; reference-card images by their card key
+  const u = unitBySid(sid), im = imgs.get(u ? sidOf(u) : sid), k = u ? imgKey(u) : sid;
+  if (im && k) idb.set(k, im);
+}
+const saveText = () => idb.set('__text', { ...refText, titles: [...refTitles] });
 
-const saveText = () => idb.set('__text', { ...refText, titles: [...refTitles], smap: [...spellMap] });
-
-let listId = null;
-const listKey = id => `__list:${id}`;
+// ---------- saved lists: army data once, play state separately (wounds change often) ----------
+const listKey = id => `__list:${id}`, stateKey = id => `__state:${id}`;
 const listIndex = async () => (await idb.get('__lists')) || [];
+const loadState = async id => (await idb.get(stateKey(id))) || (await idb.get(listKey(id)))?.state;   // older saves kept state inside the list
+const snapState = () => ({ wounds: [...play.wounds], dead: [...play.dead], playI: play.i,
+  names: [...names], facs: [...facs], qty: [...qty], ruleNames: [...ruleNames], wpnNames: [...wpnNames] });
+function applyState(st = {}) {
+  play.wounds = new Map(st.wounds || []); play.dead = new Set(st.dead || []); play.i = st.playI || 0;
+  for (const [m, k] of [[names, 'names'], [facs, 'facs'], [qty, 'qty'], [ruleNames, 'ruleNames'], [wpnNames, 'wpnNames']]) { m.clear(); (st[k] || []).forEach(([a, b]) => m.set(a, b)); }
+}
+async function persistList(full) {
+  if (!army || !listId) return;
+  const name = army.name || listId, now = Date.now();
+  if (full) await idb.set(listKey(listId), { id: listId, url: $('url').value.trim() || listId, name, pts: army.listPoints, savedAt: now, army });
+  await idb.set(stateKey(listId), snapState());
+  const all = [{ id: listId, name, pts: army.listPoints, savedAt: now }, ...(await listIndex()).filter(x => x.id !== listId)];
+  for (const x of all.slice(30)) { idb.del(listKey(x.id)); idb.del(stateKey(x.id)); }   // keep the 30 most recent
+  await idb.set('__lists', all.slice(0, 30));
+}
 let _saveT; const savePlaySoon = () => { clearTimeout(_saveT); _saveT = setTimeout(() => persistList(), 250); };
+async function restoreImgs(units) {
+  const recs = await Promise.all(units.map(u => idb.get(imgKey(u)))); let n = 0;
+  units.forEach((u, i) => { if (recs[i]) { imgs.set(sidOf(u), { src: recs[i].src, t: { ...recs[i].t } }); n++; } });
+  return n;
+}
+async function applyList(entry, state, fromNet) {
+  listId = entry.id; army = entry.army; $('url').value = entry.url || entry.id;
+  for (const k of [...imgs.keys()]) if (!k.startsWith('ref:')) imgs.delete(k);   // keep reference-card images
+  applyState(state || {});
+  bookNames.clear();
+  const byArmy = new Map();
+  for (const u of army.units || []) if (u.armyId) (byArmy.get(u.armyId) || byArmy.set(u.armyId, []).get(u.armyId)).push(u);
+  for (const [id, list] of byArmy) { const n = inferFaction(list); if (n) bookNames.set(id, n); }
+  const restored = await restoreImgs(army.units || []);
+  status(`${fromNet ? 'Imported' : 'Restored'} “${army.name || listId}” · ${(army.units || []).length} units · ${army.listPoints ?? '?'} pts` +
+    (restored ? ` · ${restored} image${restored > 1 ? 's' : ''}` : '') +
+    (state && ((state.wounds || []).length || (state.dead || []).length) ? ' · play state restored' : ''), 'ok');
+  await persistList(fromNet); render();
+}
+async function showDrop() {
+  const idx = await listIndex(), box = $('urlDrop');
+  if (!idx.length) { box.hidden = true; box.innerHTML = ''; return; }
+  box.innerHTML = idx.map(e =>
+    `<div class="li"><button type="button" class="li-main" data-lid="${esc(e.id)}"><b>${esc(e.name || e.id)}</b>` +
+    `<small>${e.pts != null ? e.pts + ' pts · ' : ''}${new Date(e.savedAt).toLocaleString()}</small></button>` +
+    `<button type="button" class="li-x" data-del="${esc(e.id)}" title="Remove saved list">✕</button></div>`
+  ).join('') + `<button type="button" class="li-clear" data-clear="1">Clear saved lists</button>`;
+  box.hidden = false;
+}
+const hideDrop = () => { $('urlDrop').hidden = true; };
 
-// ---------- UI scaffolding ----------
+// ---------- settings UI ----------
 $('sizes').innerHTML = GROUPS.map(([title, sids, cids]) =>
   `<div class="g"><span class="gl">${title}</span><div class="row">` +
-  sids.map(id => { const [,l,v,mn,mx,st] = fieldOf(id); return `<label>${l}<input type="number" id="${id}" value="${v}" min="${mn}" max="${mx}" step="${st}"></label>`; }).join('') +
-  cids.map(id => { const [,l,v] = colorOf(id); return `<label>${l}<input type="color" id="${id}" value="${v}"></label>`; }).join('') +
+  sids.map(id => { const [, l, v, mn, mx, st] = FIELDS.find(f => f[0] === id); return `<label>${l}<input type="number" id="${id}" value="${v}" min="${mn}" max="${mx}" step="${st}"></label>`; }).join('') +
+  cids.map(id => { const [, l, v] = COLORS.find(c => c[0] === id); return `<label>${l}<input type="color" id="${id}" value="${v}"></label>`; }).join('') +
   `</div></div>`).join('');
-$('refs').insertAdjacentHTML('beforeend', REFS.map(([k,t]) =>
+$('refs').insertAdjacentHTML('beforeend', REFS.map(([k, t]) =>
   `<label class="hint">${t}</label><textarea data-ref="${k}" placeholder="Name:description"></textarea>`).join(''));
 
 function applyVars() {
+  const root = document.documentElement.style;
   document.body.classList.toggle('bordered', $('bord').checked);
-  for (const [id,,def,mn,mx] of FIELDS) {
-    let v = Number($(id).value); if (!Number.isFinite(v)) v = def;
-    document.documentElement.style.setProperty('--' + id, Math.max(mn, Math.min(mx, v)) + 'mm');
-  }
-  for (const [id,,def] of COLORS) {
-    const el = $(id);
-    document.documentElement.style.setProperty('--' + id, (el && el.value) || def);
-  }
+  for (const [id, , def, mn, mx] of FIELDS) { const v = Number($(id).value); root.setProperty('--' + id, Math.max(mn, Math.min(mx, Number.isFinite(v) ? v : def)) + 'mm'); }
+  for (const [id, , def] of COLORS) root.setProperty('--' + id, $(id)?.value || def);
 }
 
 // ---------- list data ----------
@@ -305,7 +331,6 @@ const rating = r => r.label || (r.rating != null ? `${r.name}(${r.rating})` : r.
 const isTough = l => /^tough(\s*\(|$)/i.test(l);
 const isHero = u => (u.rules || []).some(r => (r.name || '').toLowerCase() === 'hero');
 const sidOf = u => u.selectionId || u.id;
-
 function toughOf(u) {
   const t = (u.rules || []).find(r => (r.name || '').toLowerCase() === 'tough');
   if (!t) return '–';
@@ -332,18 +357,15 @@ function rulesOf(u) {
   return out;
 }
 function weaponsOf(u) {
-  const src = u.loadout?.length ? u.loadout : (u.weapons || []);
-  const m = new Map();
+  const src = u.loadout?.length ? u.loadout : (u.weapons || []), m = new Map();
   for (const e of src) {
     if (!e || e.type === 'ArmyBookItem' || !(e.type === 'ArmyBookWeapon' || e.attacks != null || e.weaponId != null)) continue;
     const label = e.label || e.name; if (!label) continue;
-    const n = Number(e.count || e.originalCount || 1) || 1;
-    const w = m.get(label) || { n: 0, label, melee: !e.range }; w.n += n; m.set(label, w);
+    const w = m.get(label) || { n: 0, label, melee: !e.range }; w.n += Number(e.count || e.originalCount || 1) || 1; m.set(label, w);
   }
   const all = [...m.values()];
   return [...all.filter(w => w.melee), ...all.filter(w => !w.melee)].map(w => (w.n > 1 ? `${w.n}× ` : '') + w.label);
 }
-
 // Merge a combined-unit half into its host; drop duplicate profiles
 function mergeList(a, b, keyFn) {
   const m = new Map();
@@ -355,40 +377,32 @@ function mergeList(a, b, keyFn) {
   return [...m.values()];
 }
 function prepare(units) {
-  const raw = units.map(u => ({ ...u }));
-  const bySid = new Map(raw.map(u => [sidOf(u), u]));
-  const gone = new Set(), merged = new Map();
+  const raw = units.map(u => ({ ...u })), bySid = new Map(raw.map(u => [sidOf(u), u])), gone = new Set(), merged = new Map();
+  const wKey = e => (e.label || e.name || '') + '|' + (e.type || '');
   for (const u of raw) {
     if (!u.joinToUnit || isHero(u) || !bySid.has(u.joinToUnit)) continue;
     const h = merged.get(u.joinToUnit) || bySid.get(u.joinToUnit);
     merged.set(u.joinToUnit, { ...h, size: (+h.size || 0) + (+u.size || 0), totalCost: costOf(h) + costOf(u),
-      loadout: mergeList(h.loadout, u.loadout, e => (e.label || e.name || '') + '|' + (e.type || '')),
-      weapons: mergeList(h.weapons, u.weapons, e => (e.label || e.name || '') + '|' + (e.type || '')),
+      loadout: mergeList(h.loadout, u.loadout, wKey), weapons: mergeList(h.weapons, u.weapons, wKey),
       rules: mergeList(h.rules, u.rules, e => (rating(e) || '').toLowerCase()), joinToUnit: null });
     gone.add(sidOf(u));
   }
   const seen = new Set();
   return raw.filter(u => !gone.has(sidOf(u))).map(u => merged.get(sidOf(u)) || u).filter(u => {
-    const k = [u.armyId, u.genericName || u.name, u.quality, u.defense, toughOf(u), u.size, costOf(u),
-      rulesOf(u).sort().join('|'), weaponsOf(u).join('|')].join('::');
+    const k = [u.armyId, u.genericName || u.name, u.quality, u.defense, toughOf(u), u.size, costOf(u), rulesOf(u).sort().join('|'), weaponsOf(u).join('|')].join('::');
     return seen.has(k) ? false : (seen.add(k), true);
   });
 }
 const ruleBase = l => (/^([^(]+)/.exec(String(l).trim()) || [, l])[1].trim();
-function ruleDisp(label, aid) {
-  const b = ruleBase(label), ov = ruleNames.get(aid + '::' + b);
-  return ov ? ov + String(label).trim().slice(b.length) : label;
-}
+const ruleDisp = (label, aid) => { const b = ruleBase(label), ov = ruleNames.get(aid + '::' + b); return ov ? ov + String(label).trim().slice(b.length) : label; };
 function parseWpn(s) {
   const pre = (/^(\d+\s*[×x]\s*)/i.exec(s) || [''])[0], rest = s.slice(pre.length).trim(), i = rest.search(/\s+\(/);
   return i < 0 ? { pre, name: rest, stats: '' } : { pre, name: rest.slice(0, i).trim(), stats: rest.slice(i) };
 }
-function wpnDisp(label, aid) {
-  const p = parseWpn(label), ov = wpnNames.get(aid + '::' + p.name);
-  return p.pre + (ov || p.name) + p.stats;
-}
+const wpnDisp = (label, aid) => { const p = parseWpn(label); return p.pre + (wpnNames.get(aid + '::' + p.name) || p.name) + p.stats; };
 const armyKey = u => String(u.armyId || '_');
-// Army Forge army-book API has no CORS — infer faction per armyId from unit names
+
+// Army Forge's army-book API has no CORS, so the faction label is inferred from unit names (click it on a card to rename)
 const FACTIONS = [
   'Prime Brothers','Battle Brothers','Alien Hives','Blessed Sisters','Dao Union','Dwarf Guilds',
   'Elven Union','Eternal Dynasty','Havoc Brothers','High Elf Fleets','Human Defense Force',
@@ -396,92 +410,50 @@ const FACTIONS = [
   'Saorian Savages','Soul-Snatcher Cults','TAO Coalition','Vampiric Undead','Warfleets Riftany',
   'Jackals','Marauders','Goblins','Ratmen','Undead Hordes','Empire of Rift-Kin','Knight Brothers',
   'Custodian Brothers','Wolves','Beastmen','Dark Elves','Wood Elves','Dread Elves','Rift Daemons',
-  'Blood Brothers','Watcher Brothers','Sky-Riders','Titan-Lords'
-];
+  'Blood Brothers','Watcher Brothers','Sky-Riders','Titan-Lords'];
+const FACTION_RE = FACTIONS.map(f => [f, new RegExp(f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'), 'i')]);
+const KEYWORDS = [
+  [/prime\s+(brother|leader|master|guard|support)/i, 'Prime Brothers'], [/battle\s+(brother|leader|master)/i, 'Battle Brothers'],
+  [/\bhive\b|alien\s*hive|nomad\s*hive|xen[o-]|brood\s*brother/i, 'Alien Hives'], [/defense\s*force|hdf\b/i, 'Human Defense Force'],
+  [/robot\s*legion|walker\s*bot|drone\s*bot/i, 'Robot Legions']];
 function inferFaction(units) {
-  const names = (units || []).map(u =>
-    [u.genericName, u.name, u.customName].filter(Boolean).map(s => String(s).replace(/\s+/g, ' ').trim()).join(' ')
-  ).filter(Boolean);
-  if (!names.length) return '';
-  const blob = names.join('\n');
-  // 1) known faction label appears in any unit name
-  for (const f of FACTIONS) {
-    const re = new RegExp(f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'), 'i');
-    if (names.some(n => re.test(n))) return f;
-  }
-  // 2) keyword patterns for awkward generic names
-  if (/prime\s+(brother|leader|master|guard|support)/i.test(blob)) return 'Prime Brothers';
-  if (/battle\s+(brother|leader|master)/i.test(blob)) return 'Battle Brothers';
-  if (/\bhive\b|alien\s*hive|nomad\s*hive|xen[o-]|brood\s*brother/i.test(blob)) return 'Alien Hives';
-  if (/defense\s*force|hdf\b/i.test(blob)) return 'Human Defense Force';
-  if (/robot\s*legion|walker\s*bot|drone\s*bot/i.test(blob)) return 'Robot Legions';
-  // 3) longest shared multi-word suffix across units of this army
-  if (names.length >= 2) {
-    const endings = new Map();
-    for (const n of names) {
-      const w = n.split(' ');
-      for (let len = Math.min(3, w.length); len >= 2; len--) {
-        const e = w.slice(-len).join(' ');
-        endings.set(e, (endings.get(e) || 0) + 1);
-      }
-    }
+  const nm = (units || []).map(u => [u.genericName, u.name, u.customName].filter(Boolean).map(s => String(s).replace(/\s+/g, ' ').trim()).join(' ')).filter(Boolean);
+  if (!nm.length) return '';
+  const hit = FACTION_RE.find(([, re]) => nm.some(n => re.test(n))); if (hit) return hit[0];
+  const kw = KEYWORDS.find(([re]) => re.test(nm.join('\n'))); if (kw) return kw[1];
+  if (nm.length >= 2) {   // longest shared 2–3 word ending across the army's units
+    const ends = new Map();
+    for (const n of nm) { const w = n.split(' '); for (let len = Math.min(3, w.length); len >= 2; len--) { const e = w.slice(-len).join(' '); ends.set(e, (ends.get(e) || 0) + 1); } }
     let best = '', sc = 0;
-    for (const [e, c] of endings) {
-      if (c < 2) continue;
-      const s = c * 10 + e.length;
-      if (s > sc) { sc = s; best = e; }
-    }
+    for (const [e, c] of ends) if (c >= 2 && c * 10 + e.length > sc) { sc = c * 10 + e.length; best = e; }
     if (best) return best;
   }
-  // 4) single unit: last 2 words if they look like a label
-  const w = names[0].split(' ');
-  if (w.length >= 2) return w.slice(-2).join(' ');
-  return names[0];
+  const w = nm[0].split(' '); return w.length >= 2 ? w.slice(-2).join(' ') : nm[0];
 }
-async function resolveBookNames(units) {
-  bookNames.clear();
-  const by = new Map();
-  for (const u of units || []) {
-    const id = u.armyId; if (!id) continue;
-    if (!by.has(id)) by.set(id, []);
-    by.get(id).push(u);
-  }
-  for (const [id, list] of by) {
-    const n = inferFaction(list);
-    if (n) bookNames.set(id, n);
-  }
-}
-function factionOf(u) {
-  if (facs.has(armyKey(u))) return facs.get(armyKey(u));
-  if (u?.armyId && bookNames.has(u.armyId)) return bookNames.get(u.armyId);
-  return inferFaction([u]) || 'Faction';
-}
+const factionOf = u => facs.get(armyKey(u)) || bookNames.get(u?.armyId) || inferFaction([u]) || 'Faction';
 const nameOf = u => names.get(sidOf(u)) || u.customName || u.name || u.genericName || 'Unit';
 
 // ---------- rendering ----------
+const tVars = t => t ? `--o:${t.o / 100};--x:${t.x}%;--y:${t.y}%;--z:${t.z / 100}` : '';
+const artHtml = im => im ? `<img class="art" src="${im.src}" alt="" draggable="false">` : '<div class="art"></div>';
+const IMG_UI = `<button class="tool" data-up>Image</button>
+      <div class="imgmenu" hidden><button type="button" data-gal>Library</button><button type="button" data-cam>Camera</button></div>
+      <input type="file" accept="image/*" data-file data-gal hidden>
+      <input type="file" accept="image/*" capture="environment" data-file data-cam hidden>`;
+
 function cardHtml(u) {
-  const sid = sidOf(u), im = imgs.get(sid);
-  const t = im ? im.t : null;
-  const style = t ? `--o:${t.o / 100};--x:${t.x}%;--y:${t.y}%;--z:${t.z / 100}` : '';
-  const q = u.quality != null ? u.quality + '+' : '–', d = u.defense != null ? u.defense + '+' : '–';
-  return `<article class="card" data-sid="${esc(sid)}" data-aid="${esc(armyKey(u))}" data-qty="${qty.get(sid) || 1}" data-n="${u.size || 1}" data-t="${esc(toughOf(u))}" style="${style}">
+  const sid = sidOf(u), aid = armyKey(u), q = u.quality != null ? u.quality + '+' : '–', d = u.defense != null ? u.defense + '+' : '–';
+  return `<article class="card" data-sid="${esc(sid)}" data-aid="${esc(aid)}" data-qty="${qty.get(sid) || 1}" data-n="${u.size || 1}" data-t="${esc(toughOf(u))}" style="${tVars(imgs.get(sid)?.t)}">
     <div class="body">
-      <div class="art" ${im ? '' : 'style="background-color:#d8d8d8"'}></div>${im ? `<img class="art" src="${im.src}" alt="" draggable="false">` : ''}
+      ${artHtml(imgs.get(sid))}
       <div class="ov${$('stack').checked ? ' stack' : ''}">
         <div class="namebox"><div class="nm"><span class="ed" data-nm>${esc(nameOf(u))}</span> [${u.size || 1}]</div><div>${costOf(u)}pts</div></div>
-        <div class="fac ed" data-fac="${esc(armyKey(u))}">${esc(factionOf(u))}</div>
-        <div class="rules">${rulesOf(u).map(r => `<span class="chip ed" data-rule="${esc(r)}">${esc(ruleDisp(r, armyKey(u)))}</span>`).join('')}</div>
-        <div class="weapons">${weaponsOf(u).map(w => `<div class="wpn ed" data-wpn="${esc(w)}">${esc(wpnDisp(w, armyKey(u)))}</div>`).join('')}</div>
-        <div class="stats">${[['Quality', q], ['Defense', d], ['Tough', toughOf(u)]].map(([l, v]) =>
-          `<div class="stat"><b>${l}</b><i>${esc(v)}</i></div>`).join('')}</div>
+        <div class="fac ed" data-fac="${esc(aid)}">${esc(factionOf(u))}</div>
+        <div class="rules">${rulesOf(u).map(r => `<span class="chip ed" data-rule="${esc(r)}">${esc(ruleDisp(r, aid))}</span>`).join('')}</div>
+        <div class="weapons">${weaponsOf(u).map(w => `<div class="wpn ed" data-wpn="${esc(w)}">${esc(wpnDisp(w, aid))}</div>`).join('')}</div>
+        <div class="stats">${[['Quality', q], ['Defense', d], ['Tough', toughOf(u)]].map(([l, v]) => `<div class="stat"><b>${l}</b><i>${esc(v)}</i></div>`).join('')}</div>
       </div>
-      <button class="tool" data-up>Image</button>
-      <div class="imgmenu" hidden>
-        <button type="button" data-gal>Library</button>
-        <button type="button" data-cam>Camera</button>
-      </div>
-      <input type="file" accept="image/*" data-file data-gal hidden>
-      <input type="file" accept="image/*" capture="environment" data-file data-cam hidden>
+      ${IMG_UI}
     </div></article>`;
 }
 function ctlHtml(u) {
@@ -506,25 +478,18 @@ function blocksOf(raw) {
   return out;
 }
 const entryHtml = e => `<div class="re"><b>${esc(e.name)}</b><p>${esc(e.desc || '—')}</p></div>`;
+// Spell cards use slightly smaller type so more spells fit per card
+const cssNum = n => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(n));
+const spellVars = () => `--rt:${Math.min(cssNum('--rt') || 2.8, 2.6)}mm;--rn:${Math.min(cssNum('--rn') || 2.8, 2.4)}mm;--rd:${Math.min(cssNum('--rd') || 2.6, 2.2)}mm;`;
 
 // Fill a hidden, real-size card until it overflows, so text never clips
 function paginate(entries, title, spells) {
   const probe = document.createElement('article');
-  probe.className = 'card ref'; probe.style.cssText = 'position:absolute;left:-9999px;visibility:hidden';
-  // Spells only: cap type sizes so more fit per card (avoids one-spell-per-card blowouts)
-  if (spells) {
-    const rt = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rt')) || 2.8, 2.6);
-    const rn = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rn')) || 2.8, 2.4);
-    const rd = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rd')) || 2.6, 2.2);
-    probe.style.setProperty('--rt', rt + 'mm');
-    probe.style.setProperty('--rn', rn + 'mm');
-    probe.style.setProperty('--rd', rd + 'mm');
-  }
+  probe.className = 'card ref'; probe.style.cssText = 'position:absolute;left:-9999px;visibility:hidden;' + (spells ? spellVars() : '');
   probe.innerHTML = `<div class="top">${esc(title)}</div><div class="rb"></div>`;
   document.body.appendChild(probe);
-  const body = probe.querySelector('.rb'), pages = [];
+  const body = probe.querySelector('.rb'), pages = [], over = list => { body.innerHTML = list.map(entryHtml).join(''); return body.scrollHeight > body.clientHeight + 2; };
   let page = [];
-  const over = list => { body.innerHTML = list.map(entryHtml).join(''); return body.scrollHeight > body.clientHeight + 2; };
   for (const e of entries) {
     if (page.length && over([...page, e])) { pages.push(page); page = []; }
     page.push(e);
@@ -537,37 +502,18 @@ function refCards() {
   let html = '', n = 0;
   for (const [k, base] of REFS) {
     const blocks = k === 'core' ? [parseRules(refText.core)] : blocksOf(refText[k]);
-    const spells = k === 'spells';
     blocks.forEach((entries, bi) => {
       if (!entries.length) return;
       const key = `${k}:${bi}`, sid = 'ref:' + key, title = refTitles.get(key) || (blocks.length > 1 ? `${base} ${bi + 1}` : base);
-      const pages = paginate(entries, title, spells);
-      const im = imgs.get(sid), st = im ? im.t : null;
-      const style = (st ? `--o:${st.o / 100};--x:${st.x}%;--y:${st.y}%;--z:${st.z / 100};` : '') +
-        (spells ? `--rt:min(var(--rt),2.6mm);--rn:min(var(--rn),2.4mm);--rd:min(var(--rd),2.2mm);` : '');
-      // CSS min() in custom props may not work on all — set explicit if spells
-      const style2 = spells
-        ? (() => {
-            const rt = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rt')) || 2.8, 2.6);
-            const rn = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rn')) || 2.8, 2.4);
-            const rd = Math.min(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rd')) || 2.6, 2.2);
-            return `--rt:${rt}mm;--rn:${rn}mm;--rd:${rd}mm;` + (st ? `--o:${st.o / 100};--x:${st.x}%;--y:${st.y}%;--z:${st.z / 100}` : '');
-          })()
-        : (st ? `--o:${st.o / 100};--x:${st.x}%;--y:${st.y}%;--z:${st.z / 100}` : '');
+      const pages = paginate(entries, title, k === 'spells'), im = imgs.get(sid), style = (k === 'spells' ? spellVars() : '') + tVars(im?.t);
       pages.forEach((p, i) => {
         n++;
-        html += `<div class="shell"><article class="card ref" data-sid="${esc(sid)}" data-rk="${key}" style="${style2}">
+        html += `<div class="shell"><article class="card ref" data-sid="${esc(sid)}" data-rk="${key}" style="${style}">
           <div class="body">
-            <div class="art" ${im ? '' : 'style="background-color:#d8d8d8"'}></div>${im ? `<img class="art" src="${im.src}" alt="" draggable="false">` : ''}
+            ${artHtml(im)}
             <div class="top"><span class="ed" data-title="${key}" data-cur="${esc(title)}">${esc(title)}${pages.length > 1 ? ` (${i + 1}/${pages.length})` : ''}</span></div>
             <div class="rb">${p.map(entryHtml).join('')}</div>
-            <button class="tool" data-up>Image</button>
-            <div class="imgmenu" hidden>
-              <button type="button" data-gal>Library</button>
-              <button type="button" data-cam>Camera</button>
-            </div>
-            <input type="file" accept="image/*" data-file data-gal hidden>
-            <input type="file" accept="image/*" capture="environment" data-file data-cam hidden>
+            ${IMG_UI}
           </div></article></div>`;
       });
     });
@@ -590,9 +536,9 @@ function render() {
   attachCamera();
 }
 
-// ---------- events ----------
+// ---------- camera (stays live on a card until Capture / Cancel / Play) ----------
 const status = (m, k) => { $('status').textContent = m || ''; $('status').className = k || ''; };
-let cam = null; // { stream, sid } — stream stays live until Cancel / Capture / play mode
+let cam = null;   // { stream, sid }
 function stopCamera() {
   if (!cam) return;
   try { cam.stream.getTracks().forEach(t => t.stop()); } catch (_) {}
@@ -600,73 +546,51 @@ function stopCamera() {
   document.querySelectorAll('.card.cam-on').forEach(c => c.classList.remove('cam-on'));
   cam = null;
 }
-function bindCamControls(card, video, bar) {
-  const sid = cam.sid;
+function attachCamera() {
+  if (!cam) return;
+  const sid = cam.sid, card = document.querySelector(`.card[data-sid="${CSS.escape(sid)}"]`); if (!card) return;   // card off screen: keep stream
+  const body = card.querySelector('.body') || card;
+  card.querySelectorAll('.camfeed,.cambar').forEach(e => e.remove());
+  const video = Object.assign(document.createElement('video'), { className: 'camfeed', muted: true, autoplay: true, srcObject: cam.stream });
+  video.setAttribute('playsinline', '');
+  const bar = Object.assign(document.createElement('div'), { className: 'cambar',
+    innerHTML: '<button type="button" data-shot>Capture</button><button type="button" class="danger" data-cancel>Cancel</button>' });
+  body.insertBefore(video, body.firstChild); body.appendChild(bar); card.classList.add('cam-on'); video.play().catch(() => {});
   bar.querySelector('[data-cancel]').onclick = e => { e.stopPropagation(); stopCamera(); };
   bar.querySelector('[data-shot]').onclick = e => {
-    e.stopPropagation();
-    if (!cam) return;
-    const w = video.videoWidth || 756, h = video.videoHeight || 1056;
-    const aspect = (card.clientWidth || 63) / (card.clientHeight || 88);
+    e.stopPropagation(); if (!cam) return;
+    const w = video.videoWidth || 756, h = video.videoHeight || 1056, aspect = (card.clientWidth || 63) / (card.clientHeight || 88);
     let sw = w, sh = h, sx = 0, sy = 0;
     if (w / h > aspect) { sw = h * aspect; sx = (w - sw) / 2; } else { sh = w / aspect; sy = (h - sh) / 2; }
     const cv = document.createElement('canvas'); cv.width = 756; cv.height = 1056;
     cv.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
     imgs.set(sid, { src: cv.toDataURL('image/jpeg', 0.92), t: { o: 100, x: 0, y: 0, z: 100 } });
-    const u = army?.units?.find(u => String(sidOf(u)) === sid);
-    if (u) saveImg(u); else idb.set(sid, imgs.get(sid));
-    stopCamera(); render();
+    saveImgFor(sid); stopCamera(); render();
   };
-}
-function attachCamera() {
-  if (!cam) return;
-  const card = document.querySelector(`.card[data-sid="${CSS.escape(cam.sid)}"]`);
-  if (!card) return; // card not on screen; keep stream until cancel
-  const body = card.querySelector('.body') || card;
-  card.querySelectorAll('.camfeed,.cambar').forEach(e => e.remove());
-  const video = document.createElement('video');
-  video.className = 'camfeed'; video.setAttribute('playsinline', ''); video.muted = true; video.autoplay = true;
-  video.srcObject = cam.stream;
-  const bar = document.createElement('div');
-  bar.className = 'cambar';
-  bar.innerHTML = '<button type="button" data-shot>Capture</button><button type="button" class="danger" data-cancel>Cancel</button>';
-  body.insertBefore(video, body.firstChild);
-  body.appendChild(bar);
-  card.classList.add('cam-on');
-  video.play().catch(() => {});
-  bindCamControls(card, video, bar);
 }
 async function openCamera(card) {
   if (!navigator.mediaDevices?.getUserMedia) return status('Camera not available in this browser.', 'err');
   const sid = card.dataset.sid; if (!sid) return;
-  if (cam && cam.sid === sid) return attachCamera(); // already live for this card
+  if (cam && cam.sid === sid) return attachCamera();
   stopCamera();
-  let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
-  catch (err) { return status('Camera permission denied or unavailable.', 'err'); }
-  cam = { stream, sid };
+  try { cam = { stream: await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }), sid }; }
+  catch (_) { return status('Camera permission denied or unavailable.', 'err'); }
   attachCamera();
 }
-const ask = (msg, cur) => { const v = prompt(msg, cur); return v && v.trim() && v.trim() !== cur ? v.trim() : null; };
-const sidFrom = el => el.closest('[data-sid]').dataset.sid;
 
+// ---------- grid events ----------
+const ask = (msg, cur) => { const v = prompt(msg, cur); return v && v.trim() && v.trim() !== cur ? v.trim() : null; };
 $('grid').addEventListener('click', e => {
   const t = e.target;
   if (t.dataset.up !== undefined) {
     e.stopPropagation();
-    document.querySelectorAll('.imgmenu').forEach(m => { if (m !== t.parentElement.querySelector('.imgmenu')) m.hidden = true; });
-    const m = t.parentElement.querySelector('.imgmenu'); if (m) m.hidden = !m.hidden;
+    const menu = t.parentElement.querySelector('.imgmenu');
+    document.querySelectorAll('.imgmenu').forEach(m => { if (m !== menu) m.hidden = true; });
+    if (menu) menu.hidden = !menu.hidden;
     return;
   }
-  if (t.dataset.gal !== undefined) {
-    const inp = t.closest('.body, .card')?.querySelector('input[data-file][data-gal]'); if (inp) inp.click();
-    t.closest('.imgmenu').hidden = true; return;
-  }
-  if (t.dataset.cam !== undefined) {
-    const card = t.closest('.card'); t.closest('.imgmenu').hidden = true;
-    if (card) openCamera(card);
-    return;
-  }
+  if (t.matches('button[data-gal]')) { t.closest('.body, .card')?.querySelector('input[data-file][data-gal]')?.click(); t.closest('.imgmenu').hidden = true; return; }
+  if (t.matches('button[data-cam]')) { t.closest('.imgmenu').hidden = true; const card = t.closest('.card'); if (card) openCamera(card); return; }
   const sid = (t.closest('[data-sid]') || t.closest('.shell')?.querySelector('[data-sid]'))?.dataset.sid, aid = t.closest('[data-aid]')?.dataset.aid;
   const rename = (map, orig, label) => {
     const k = aid + '::' + orig, v = ask(label + ' (this faction only; values in brackets stay fixed):', map.get(k) || orig);
@@ -674,13 +598,11 @@ $('grid').addEventListener('click', e => {
     if (!c) return;
     c === orig ? map.delete(k) : map.set(k, c); savePlaySoon(); render();
   };
-  if (t.dataset.rm !== undefined) {
-    const u = army.units.find(u => String(sidOf(u)) === sid); imgs.delete(sidOf(u)); idb.del(imgKey(u)); return render();
-  }
+  if (t.dataset.rm !== undefined) { const u = unitBySid(sid); imgs.delete(sidOf(u)); idb.del(imgKey(u)); return render(); }
   if (t.dataset.rule !== undefined) return rename(ruleNames, ruleBase(t.dataset.rule), 'Rename rule');
   if (t.dataset.wpn !== undefined) return rename(wpnNames, parseWpn(t.dataset.wpn).name, 'Rename weapon');
   if (t.dataset.nm !== undefined) {
-    const u = army.units.find(u => String(sidOf(u)) === sid), v = ask('Rename unit:', nameOf(u));
+    const u = unitBySid(sid), v = ask('Rename unit:', nameOf(u));
     if (v) { names.set(sidOf(u), v); savePlaySoon(); render(); }
   } else if (t.dataset.fac !== undefined) {
     const u = army.units.find(u => armyKey(u) === t.dataset.fac), v = ask('Rename faction (whole army):', factionOf(u));
@@ -691,37 +613,29 @@ $('grid').addEventListener('click', e => {
   }
 });
 $('grid').addEventListener('change', e => {
-  const t = e.target, el = t.closest('[data-sid]') || t.closest('.shell')?.querySelector('[data-sid]');
-  if (!el) return;
-  const sid = el.dataset.sid, u = army?.units?.find(u => String(sidOf(u)) === sid), key = u ? sidOf(u) : sid;
-  if (t.matches('[data-q]') && u) { qty.set(key, Math.max(1, Math.min(20, parseInt(t.value) || 1))); savePlaySoon(); render(); }
-  else if (t.matches('[data-tr]')) { if (u) saveImg(u); else { const im = imgs.get(sid); if (im) idb.set(sid, im); } render(); }
+  const t = e.target, el = t.closest('[data-sid]') || t.closest('.shell')?.querySelector('[data-sid]'); if (!el) return;
+  const sid = el.dataset.sid, u = unitBySid(sid), key = u ? sidOf(u) : sid;
+  if (t.matches('[data-q]') && u) { qty.set(key, clampInt(t.value, 1, 20, 1)); savePlaySoon(); render(); }
+  else if (t.matches('[data-tr]')) { saveImgFor(sid); render(); }
   else if (t.matches('[data-file]') && t.files[0]) {
-    const fr = new FileReader(), sidKey = el.dataset.sid;
-    fr.onload = () => {
-      imgs.set(sidKey, { src: fr.result, t: { o: 100, x: 0, y: 0, z: 100 } });
-      if (u) saveImg(u); else idb.set(sidKey, imgs.get(sidKey));
-      render();
-    };
+    const fr = new FileReader();
+    fr.onload = () => { imgs.set(key, { src: fr.result, t: { o: 100, x: 0, y: 0, z: 100 } }); saveImgFor(sid); render(); };
     fr.readAsDataURL(t.files[0]);
   }
 });
-$('grid').addEventListener('input', e => {
+$('grid').addEventListener('input', e => {   // live image sliders
   const t = e.target; if (!t.matches('[data-tr]')) return;
-  const shell = t.closest('.shell'), card = shell.querySelector('.card'), sid = card.dataset.sid;
-  const u = army?.units?.find(u => String(sidOf(u)) === sid);
-  const im = imgs.get(u ? sidOf(u) : sid); if (!im) return; im.t[t.dataset.tr] = Number(t.value);
-  const { o, x, y, z } = im.t;
-  card.style.cssText = `--o:${o / 100};--x:${x}%;--y:${y}%;--z:${z / 100}`;
+  const card = t.closest('.shell').querySelector('.card'), u = unitBySid(card.dataset.sid), im = imgs.get(u ? sidOf(u) : card.dataset.sid); if (!im) return;
+  im.t[t.dataset.tr] = Number(t.value); card.style.cssText = tVars(im.t);
 });
-
 let timer;
 document.querySelectorAll('[data-ref]').forEach(ta => ta.addEventListener('input', () => {
   refText[ta.dataset.ref] = ta.value; clearTimeout(timer); timer = setTimeout(() => { saveText(); render(); }, 350);
 }));
 ['sizes', 'stack', 'bord'].forEach(id => $(id).addEventListener('change', render));
-$('sizes').addEventListener('input', e => { if (e.target && e.target.type === 'color') render(); });
+$('sizes').addEventListener('input', e => { if (e.target?.type === 'color') render(); });
 
+// ---------- import / saved-list dropdown ----------
 async function load() {
   const v = $('url').value.trim();
   let id = null;
@@ -734,109 +648,49 @@ async function load() {
     if (!res.ok) throw new Error(`Couldn’t load list (${res.status}). Is it shared via “Share as Link”?`);
     const data = await res.json();
     if (!Array.isArray(data.units)) throw new Error('Unexpected response — the list may be empty or private.');
-    const prev = await idb.get(listKey(id));
-    await applyList({ id, url: v || id, name: data.name || id, pts: data.listPoints, army: data,
-      state: prev && prev.state ? prev.state : { wounds: [], dead: [], playI: 0 } }, true);
+    await applyList({ id, url: v || id, army: data }, await loadState(id), true);   // re-importing refreshes the data but keeps play state
   } catch (err) {
-    army = null; listId = null; status(err.message.startsWith('Failed') ? 'Network error contacting Army Forge.' : err.message, 'err');
-    render();
+    army = null; listId = null; status(err.message.startsWith('Failed') ? 'Network error contacting Army Forge.' : err.message, 'err'); render();
   }
   $('load').disabled = false;
 }
 $('load').onclick = load;
 $('url').addEventListener('keydown', e => { if (e.key === 'Enter') load(); if (e.key === 'Escape') hideDrop(); });
-$('url').addEventListener('focus', () => showDrop());
-$('url').addEventListener('click', () => showDrop());
-$('urlDrop').addEventListener('mousedown', e => e.preventDefault()); // keep focus while clicking
+$('url').addEventListener('focus', showDrop); $('url').addEventListener('click', showDrop);
+$('urlDrop').addEventListener('mousedown', e => e.preventDefault());   // keep input focus while clicking
 $('urlDrop').addEventListener('click', async e => {
   const btn = e.target.closest('button'); if (!btn) return;
   e.stopPropagation();
   if (btn.hasAttribute('data-clear')) {
-    const idx = await listIndex();
-    for (const x of idx) await idb.del(listKey(x.id));
-    await idb.set('__lists', []);
-    hideDrop();
-    status('Cleared saved lists.', 'ok');
-    return;
+    for (const x of await listIndex()) { await idb.del(listKey(x.id)); await idb.del(stateKey(x.id)); }
+    await idb.set('__lists', []); hideDrop(); return status('Cleared saved lists.', 'ok');
   }
   if (btn.dataset.del) {
     const id = btn.dataset.del;
-    await idb.del(listKey(id));
+    await idb.del(listKey(id)); await idb.del(stateKey(id));
     await idb.set('__lists', (await listIndex()).filter(x => x.id !== id));
-    await showDrop();
-    status('Removed saved list.', 'ok');
-    return;
+    await showDrop(); return status('Removed saved list.', 'ok');
   }
   const id = btn.dataset.lid; if (!id) return;
-  const entry = await idb.get(listKey(id));
-  hideDrop();
-  if (!entry || !entry.army) return status('Saved list missing — re-import it.', 'err');
+  const entry = await idb.get(listKey(id)); hideDrop();
+  if (!entry?.army) return status('Saved list missing — re-import it.', 'err');
   $('load').disabled = true; status('Restoring…');
-  try { await applyList(entry, false); } catch (err) { status(err.message, 'err'); }
+  try { await applyList(entry, await loadState(id), false); } catch (err) { status(err.message, 'err'); }
   $('load').disabled = false;
 });
 document.addEventListener('click', e => {
   if (!e.target.closest('.urlwrap')) hideDrop();
-  if (!e.target.closest('.imgmenu') && e.target.dataset.up === undefined)
-    document.querySelectorAll('.imgmenu').forEach(m => { m.hidden = true; });
+  if (!e.target.closest('.imgmenu') && e.target.dataset.up === undefined) document.querySelectorAll('.imgmenu').forEach(m => { m.hidden = true; });
 });
 $('print').onclick = () => print();
 
-// ---------- play mode: one big card, swipe/arrows/contents, per-model toughness, destroy, rule popups ----------
-const play = { on: false, i: 0, list: [], wounds: new Map(), dead: new Set(), lookup: new Map(), refOpen: false, back: null, pick: false, dice: null, spell: null };
-const snapState = () => ({
-  wounds: [...play.wounds.entries()], dead: [...play.dead], playI: play.i,
-  names: [...names], facs: [...facs], qty: [...qty], ruleNames: [...ruleNames], wpnNames: [...wpnNames],
-});
-function applyState(st) {
-  if (!st) { play.wounds.clear(); play.dead.clear(); play.i = 0; return; }
-  play.wounds = new Map(st.wounds || []); play.dead = new Set(st.dead || []); play.i = st.playI || 0;
-  names.clear(); (st.names || []).forEach(([k, v]) => names.set(k, v));
-  facs.clear(); (st.facs || []).forEach(([k, v]) => facs.set(k, v));
-  qty.clear(); (st.qty || []).forEach(([k, v]) => qty.set(k, v));
-  ruleNames.clear(); (st.ruleNames || []).forEach(([k, v]) => ruleNames.set(k, v));
-  wpnNames.clear(); (st.wpnNames || []).forEach(([k, v]) => wpnNames.set(k, v));
-}
-async function persistList() {
-  if (!army || !listId) return;
-  const entry = { id: listId, url: $('url').value.trim() || listId, name: army.name || listId,
-    pts: army.listPoints, savedAt: Date.now(), army, state: snapState() };
-  await idb.set(listKey(listId), entry);
-  const idx = [{ id: listId, name: entry.name, pts: entry.pts, savedAt: entry.savedAt },
-    ...(await listIndex()).filter(x => x.id !== listId)].slice(0, 30);
-  await idb.set('__lists', idx);
-}
-async function restoreImgs(units) {
-  let n = 0; for (const u of units || []) {
-    const rec = await idb.get(imgKey(u)); if (rec) { imgs.set(sidOf(u), { src: rec.src, t: { ...rec.t } }); n++; }
-  } return n;
-}
-async function applyList(entry, fromNet) {
-  listId = entry.id; army = entry.army;
-  $('url').value = entry.url || entry.id;
-  ruleNames.clear(); wpnNames.clear(); names.clear(); facs.clear(); qty.clear(); imgs.clear();
-  applyState(entry.state);
-  await resolveBookNames(army.units);
-  const restored = await restoreImgs(army.units);
-  const tag = fromNet ? 'Imported' : 'Restored';
-  status(`${tag} “${army.name || listId}” · ${(army.units || []).length} units · ${army.listPoints ?? '?'} pts` +
-    (restored ? ` · ${restored} image${restored > 1 ? 's' : ''}` : '') +
-    (entry.state && ((entry.state.wounds || []).length || (entry.state.dead || []).length) ? ' · play state restored' : ''), 'ok');
-  await persistList(); render();
-}
-async function showDrop() {
-  const idx = await listIndex(), box = $('urlDrop');
-  if (!idx.length) { box.hidden = true; box.innerHTML = ''; return; }
-  box.innerHTML = idx.map(e =>
-    `<div class="li"><button type="button" class="li-main" data-lid="${esc(e.id)}"><b>${esc(e.name || e.id)}</b>` +
-    `<small>${e.pts != null ? e.pts + ' pts · ' : ''}${new Date(e.savedAt).toLocaleString()}</small></button>` +
-    `<button type="button" class="li-x" data-del="${esc(e.id)}" title="Remove saved list">✕</button></div>`
-  ).join('') + `<button type="button" class="muted li-clear" data-clear="1">Clear saved lists</button>`;
-  box.hidden = false;
-}
-function hideDrop() { $('urlDrop').hidden = true; }
+// ---------- play mode: one big card, swipe/arrows/contents, per-model toughness, destroy, dice, spells, rule popups ----------
+const play = { on: false, i: 0, list: [], wounds: new Map(), dead: new Set(), lookup: new Map(), refOpen: false, back: null, dice: null };
 const modelsOf = it => play.wounds.get(it.sid) || Array(it.n).fill(0);   // wounds lost per model
 const aliveOf = it => modelsOf(it).filter(l => l < it.max).length;
+const isPrimary = x => x.ref || x.copy === 1;   // extra copies of a unit are reached with the Unit 1/2/… buttons
+// controls follow the unit even while its spell card is on the stage
+const unitIdx = () => { const b = play.list[play.back]; return b && !b.ref ? play.back : play.i; };
 function buildLookup() {
   const m = new Map(), add = e => { const k = ruleBase(e.name).toLowerCase(); if (k && !m.has(k)) m.set(k, e); };
   blocksOf(refText.faction).flat().forEach(add); blocksOf(refText.spells).flat().forEach(add); parseRules(refText.core).forEach(add);
@@ -845,25 +699,22 @@ function buildLookup() {
 function openPlay() {
   stopCamera();
   play.list = [...document.querySelectorAll('#grid .shell .card')].flatMap(c => {
-    const ref = c.classList.contains('ref');
+    const ref = c.classList.contains('ref'), q = ref ? 1 : Math.max(1, Number(c.dataset.qty) || 1);   // Play qty: each copy is its own tracked card
     const caster = !ref && [...c.querySelectorAll('.chip')].some(ch => ruleBase(ch.dataset.rule || ch.textContent).toLowerCase() === 'caster');
-    const q = ref ? 1 : Math.max(1, Number(c.dataset.qty) || 1);   // Play qty: each copy is its own tracked card
     const label = (c.querySelector('.nm .ed') || c.querySelector('.top .ed'))?.textContent || 'Card';
     return Array.from({ length: q }, (_, i) => ({ el: c, ref, caster, rk: c.dataset.rk || '', title: c.querySelector('[data-cur]')?.dataset.cur || '',
-      aid: c.dataset.aid || '', fac: c.querySelector('.fac')?.textContent || '',
-      baseSid: c.dataset.sid || '', copy: i + 1, copies: q,
-      sid: ref ? null : `${c.dataset.sid}#${i}`, n: ref ? 0 : Number(c.dataset.n) || 1, max: ref ? 0 : Number(c.dataset.t) || 0,
+      aid: c.dataset.aid || '', fac: c.querySelector('.fac')?.textContent || '', baseSid: c.dataset.sid || '', copy: i + 1, copies: q,
+      sid: ref ? null : `${c.dataset.sid}#${i}`, n: ref ? 0 : Number(c.dataset.n) || 1, max: ref ? 0 : Number(c.dataset.t) || 0,   // max 0 = no Tough, nothing to track
       name: q > 1 ? `${label} (${i + 1}/${q})` : label }));
   });
   if (!play.list.length) return;
-  play.lookup = buildLookup();
-  play.on = true; play.i = Math.min(play.i, play.list.length - 1);
+  play.lookup = buildLookup(); play.on = true; play.i = Math.min(play.i, play.list.length - 1);
   $('play').hidden = false; $('pToc').hidden = true; document.body.style.overflow = 'hidden';
-  try { const p = document.documentElement.requestFullscreen?.(); p && p.catch(() => {}); } catch (_) {}
+  try { document.documentElement.requestFullscreen?.()?.catch(() => {}); } catch (_) {}
   showPlay();
 }
 function closePlay() {
-  play.on = false; play.back = null; play.dice = null; play.spell = null; hideTip(); $('play').hidden = true; document.body.style.overflow = '';
+  play.on = false; play.back = null; play.dice = null; hideTip(); $('play').hidden = true; document.body.style.overflow = '';
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 }
 // make rules with a known description tappable/hoverable (unit rule chips and weapon special rules)
@@ -886,57 +737,33 @@ function linkRules(root) {
   });
 }
 function diceCardHtml() {
-  const d = play.dice || { n: 1, target: 4, last: null };
-  const res = d.last
+  const d = play.dice, res = d.last
     ? `<div class="dres"><b>${d.last.pass}</b> success${d.last.pass === 1 ? '' : 'es'} on ${d.n}d6 · ${d.target}+<br>
-        <span>1s: <b>${d.last.ones}</b> · 6s: <b>${d.last.sixes}</b></span>
-        <div class="drolls">[${d.last.rolls.join(', ')}]</div></div>`
+        <span>1s: <b>${d.last.ones}</b> · 6s: <b>${d.last.sixes}</b></span><div class="drolls">[${d.last.rolls.join(', ')}]</div></div>`
     : '<div class="pmute">Set dice &amp; target, then Roll</div>';
-  return `<article class="card dice-stage"><div class="dice-stage-in">
-    <h2>Dice</h2>
+  return `<article class="card dice-stage"><div class="dice-stage-in"><h2>Dice</h2>
     <div class="drow">
       <label>Dice <input type="number" min="1" max="40" value="${d.n}" data-dn></label>
-      <label>Pass on <select data-dt>${[2,3,4,5,6].map(n => `<option value="${n}"${n === d.target ? ' selected' : ''}>${n}+</option>`).join('')}</select></label>
+      <label>Pass on <select data-dt>${[2, 3, 4, 5, 6].map(n => `<option value="${n}"${n === d.target ? ' selected' : ''}>${n}+</option>`).join('')}</select></label>
       <button type="button" data-a="roll">Roll</button>
-    </div>
-    ${res}
-  </div></article>`;
+    </div>${res}</div></article>`;
 }
 function showPlay() {
-  hideTip(); play.pick = false;
-  // Unit index for chrome (pos / dead) when dice or spells overlay is active
-  const unitIdx = (play.back != null && play.list[play.back] && !play.list[play.back].ref) ? play.back : play.i;
-  const unit = play.list[unitIdx];
-  const wrap = document.createElement('div');
-
-  if (play.dice && unit && !unit.ref) {
-    wrap.className = 'pwrap';
-    wrap.innerHTML = diceCardHtml();
-    $('pStage').replaceChildren(wrap);
-  } else {
-    const it = play.list[play.i], clone = it.el.cloneNode(true);
-    clone.querySelectorAll('.tool,input').forEach(e => e.remove());
+  hideTip();
+  const view = play.list[play.i], ui = unitIdx(), unit = play.list[ui], wrap = document.createElement('div');
+  if (play.dice && !unit.ref) { wrap.className = 'pwrap'; wrap.innerHTML = diceCardHtml(); }
+  else {
+    const clone = view.el.cloneNode(true);
+    clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,input').forEach(e => e.remove());
     clone.querySelectorAll('.ed').forEach(e => e.classList.remove('ed'));
     linkRules(clone);
-    wrap.className = 'pwrap' + (play.dead.has(it.sid) ? ' dead' : '');
-    wrap.appendChild(clone);
-    $('pStage').replaceChildren(wrap);
+    wrap.className = 'pwrap' + (play.dead.has(view.sid) ? ' dead' : ''); wrap.appendChild(clone);
   }
+  $('pStage').replaceChildren(wrap);
   renderTrack(); renderToc(); fitPlay();
-  const it = unit || play.list[play.i];
-  const grp = play.list.map((x, k) => {
-    if (x.ref !== false && x.ref !== it.ref) return -1;
-    if (it.ref) return x.ref ? k : -1;
-    if (x.ref) return -1;
-    if (x.copies > 1 && x.copy !== 1) return -1;
-    return k;
-  }).filter(k => k >= 0);
-  let pos = grp.indexOf(unitIdx);
-  if (pos < 0 && !it.ref) {
-    const prim = play.list.findIndex(x => !x.ref && x.baseSid === it.baseSid && x.copy === 1);
-    pos = grp.indexOf(prim);
-  }
-  $('pPos').textContent = play.dice ? `Dice · ${it.name}` : `${it.ref ? 'Ref ' : ''}${pos + 1} / ${grp.length} · ${it.name}`;
+  const grp = play.list.map((x, k) => x.ref === unit.ref && isPrimary(x) ? k : -1).filter(k => k >= 0);
+  const pos = unit.ref ? grp.indexOf(ui) : grp.findIndex(k => play.list[k].baseSid === unit.baseSid);
+  $('pPos').textContent = play.dice ? `Dice · ${unit.name}` : `${unit.ref ? 'Ref ' : ''}${pos + 1} / ${grp.length} · ${unit.name}`;
   $('pPrev').disabled = play.dice || pos <= 0;
   $('pNext').disabled = play.dice || pos < 0 || pos >= grp.length - 1;
 }
@@ -944,73 +771,43 @@ function fitPlay() {
   const st = $('pStage'), w = st.firstChild; if (!w) return;
   const c = w.firstChild, W = c.offsetWidth, H = c.offsetHeight;
   w.style.width = W + 'px'; w.style.height = H + 'px';
-  const s = Math.max(.3, Math.min((st.clientWidth - 100) / W, (st.clientHeight - 16) / H));
-  w.style.transform = `translate(-50%,-50%) scale(${s})`;
+  w.style.transform = `translate(-50%,-50%) scale(${Math.max(.3, Math.min((st.clientWidth - 100) / W, (st.clientHeight - 16) / H))})`;
 }
 const spellBlocks = () => {
   const seen = new Set(), out = [];
   play.list.forEach((x, k) => { if (x.rk.startsWith('spells:') && !seen.has(x.rk)) { seen.add(x.rk); out.push({ rk: x.rk, idx: k, title: x.title }); } });
   return out;
 };
-// single spell list -> it; else remembered choice; else a title that matches the unit's faction name
-const pickBlock = (it, bl) => {
-  if (!bl.length) return null;
-  if (bl.length === 1) return bl[0];
-  const f = String(it.fac || '').toLowerCase().replace(/\s+/g, ' ').trim();
-  if (!f) return null;
+// one spell list -> it; otherwise the list whose title best matches the unit's faction name
+function pickBlock(it, bl) {
+  if (bl.length <= 1) return bl[0] || null;
+  const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(), f = norm(it.fac); if (!f) return null;
   let best = null, score = 0;
   for (const b of bl) {
-    const t = String(b.title || '').toLowerCase().replace(/\s+/g, ' ').trim();
-    const bare = t.replace(/\bspells?\b/g, '').replace(/\s+/g, ' ').trim();
-    let s = 0;
-    if (bare === f || t === f) s = 100;
-    else if (t.startsWith(f) || bare.startsWith(f)) s = 80;
-    else if (t.includes(f) || bare.includes(f)) s = 60;
-    else if (f.includes(bare) && bare.length >= 4) s = 40;
+    const t = norm(b.title), bare = norm(t.replace(/\bspells?\b/g, ''));
+    const s = bare === f || t === f ? 100 : t.startsWith(f) || bare.startsWith(f) ? 80 : t.includes(f) || bare.includes(f) ? 60 : f.includes(bare) && bare.length >= 4 ? 40 : 0;
     if (s > score) { score = s; best = b; }
   }
   return best;
-};
+}
 function renderTrack() {
-  const view = play.list[play.i];
-  // When Spells is on, stage shows the spell card but controls stay on the source unit
-  const it = (play.back != null && play.list[play.back] && !play.list[play.back].ref) ? play.list[play.back] : view;
-  const t = $('pTrack');
-  const blocks = spellBlocks();
-  const dead = play.dead.has(it.sid);
-  const spellOn = play.back != null && view.ref;
-
-  if (it.ref) {
-    t.innerHTML = `<div class="pbody"><span class="pmute">Reference card</span></div><div class="pbot"></div>`;
-    return;
-  }
-
-  const spellsBtn = it.caster && blocks.length
-    ? `<div class="pspells"><button type="button" data-a="spells" class="${spellOn ? 'on' : ''}">Spells</button></div>`
-    : `<div class="pempty"></div>`;
-  const diceBtn = `<div class="pdice"><button type="button" data-a="dice" class="${play.dice ? 'on' : ''}">Dice</button></div>`;
-  const destroyBtn = `<button type="button" data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore' : 'Destroy'}</button>`;
-  const pbot = `<div class="pbot">${diceBtn}${destroyBtn}${spellsBtn}</div>`;
-
-  const sibs = it.copies > 1
-    ? play.list.map((x, k) => ({ x, k })).filter(o => o.x.baseSid === it.baseSid)
-    : [];
-  const unitNav = sibs.length > 1
-    ? `<div class="ucopies">${sibs.map(o => `<button type="button" data-a="copy" data-i="${o.k}" class="${o.k === play.i || (play.back != null && o.k === play.back) ? 'on' : ''}">Unit ${o.x.copy}</button>`).join('')}</div>`
-    : '';
-
+  const it = play.list[unitIdx()], t = $('pTrack'), blocks = spellBlocks(), dead = play.dead.has(it.sid), spellOn = play.back != null && play.list[play.i].ref;
+  if (it.ref) { t.innerHTML = '<div class="pbody"><span class="pmute">Reference card</span></div><div class="pbot"></div>'; return; }
+  const pbot = `<div class="pbot"><div class="pdice"><button type="button" data-a="dice" class="${play.dice ? 'on' : ''}">Dice</button></div>
+    <button type="button" data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore' : 'Destroy'}</button>
+    ${it.caster && blocks.length ? `<div class="pspells"><button type="button" data-a="spells" class="${spellOn ? 'on' : ''}">Spells</button></div>` : '<div class="pempty"></div>'}</div>`;
+  const sibs = it.copies > 1 ? play.list.map((x, k) => [x, k]).filter(([x]) => x.baseSid === it.baseSid) : [];
+  const unitNav = sibs.length > 1 ? `<div class="ucopies">${sibs.map(([x, k]) =>
+    `<button type="button" data-a="copy" data-i="${k}" class="${k === play.i || k === play.back ? 'on' : ''}">Unit ${x.copy}</button>`).join('')}</div>` : '';
   if (play.spellMiss) {
     play.spellMiss = false;
     t.innerHTML = `<div class="pbody">${unitNav}<span class="pmute">No spell list matches this faction</span></div>${pbot}`;
-    setTimeout(() => renderTrack(), 2000);
-    return;
+    setTimeout(renderTrack, 2000); return;
   }
-
   const keep = t.querySelector('.pbody')?.scrollTop || 0;
   let rows = '', head = '';
-  if (it.max) {
-    const arr = modelsOf(it);
-    rows = arr.map((l, m) => {
+  if (it.max) {   // only units with Tough get wound tracking, one box per model
+    rows = modelsOf(it).map((l, m) => {
       const left = it.max - l;
       return `<div class="mdl${left < 1 ? ' gone' : ''}"><span>M${m + 1}</span>
         <div class="pips">${Array.from({ length: it.max }, (_, k) => `<i class="${k < left ? 'on' : ''}"></i>`).join('')}</div>
@@ -1019,11 +816,9 @@ function renderTrack() {
     }).join('');
     head = `<b class="${aliveOf(it) < 1 ? 'out' : ''}">Models ${aliveOf(it)} / ${it.n} · Tough ${it.max} each</b>`;
   }
-  // Unit selector + wounds share one scroll box; bottom bar stays compact
   t.innerHTML = `<div class="pbody">${unitNav}${head}${rows ? `<div class="mdls">${rows}</div>` : ''}${play.dice ? '<span class="pmute">Dice on card — tap Dice to return</span>' : spellOn ? '<span class="pmute">Spell list on card — tap Spells to return</span>' : ''}</div>${pbot}`;
   const body = t.querySelector('.pbody'); if (body) body.scrollTop = keep;
 }
-
 function renderToc() {
   let nu = 0, nr = 0;
   const row = (it, k) => {
@@ -1031,8 +826,7 @@ function renderToc() {
     const info = dead ? 'destroyed' : !it.max ? '' : it.n > 1 ? `${aliveOf(it)}/${it.n} models` : `${it.max - modelsOf(it)[0]}/${it.max}`;
     return `<button data-k="${k}" class="${k === play.i ? 'cur' : ''}${dead ? ' x' : ''}"><span>${num}</span><em>${esc(it.name)}</em><small>${info}</small></button>`;
   };
-  const units = play.list.map((it, k) => it.ref ? '' : row(it, k)).join('');
-  const refs = play.list.map((it, k) => it.ref ? row(it, k) : '').join(''), nRef = play.list.filter(x => x.ref).length;
+  const units = play.list.map((it, k) => it.ref ? '' : row(it, k)).join(''), refs = play.list.map((it, k) => it.ref ? row(it, k) : '').join(''), nRef = play.list.filter(x => x.ref).length;
   $('pToc').innerHTML = units + (nRef ? `<button data-k="refs" class="rhd"><em>Reference cards (${nRef})</em><b>${play.refOpen ? '▾' : '▸'}</b></button>${play.refOpen ? refs : ''}` : '')
     + '<button data-k="reset" class="rst">Reset all wounds &amp; restore units</button>';
 }
@@ -1041,11 +835,7 @@ function go(d) {
   const cur = play.list[play.i];
   for (let n = play.i + d; n >= 0 && n < play.list.length; n += d) {
     const x = play.list[n];
-    if (x.ref !== cur.ref) continue;
-    // Unit cards: skip extra copies — Unit 1/2 buttons handle those
-    if (!x.ref && cur.baseSid && x.baseSid === cur.baseSid) continue;
-    if (!x.ref && x.copies > 1 && x.copy !== 1) continue;
-    play.i = n; return showPlay();
+    if (x.ref === cur.ref && isPrimary(x) && (x.ref || x.baseSid !== cur.baseSid)) { play.i = n; return showPlay(); }
   }
 }
 
@@ -1062,24 +852,15 @@ let ptype = 'mouse';
 $('pStage').addEventListener('pointerdown', e => { ptype = e.pointerType; });
 $('pStage').addEventListener('pointerover', e => { if (e.pointerType === 'mouse') showTip(e.target.closest('[data-tip]')); });
 $('pStage').addEventListener('pointerout', e => { if (e.pointerType === 'mouse') hideTip(); });
+function readDice() {
+  const d = play.dice, root = $('pStage'), nEl = root.querySelector('[data-dn]'), tEl = root.querySelector('[data-dt]');
+  d.n = clampInt(nEl ? nEl.value : d.n, 1, 40, 1); d.target = clampInt(tEl ? tEl.value : d.target, 2, 6, 4);
+}
 function doRoll() {
-  if (!play.dice) return;
-  const d = play.dice;
-  // Read live values from the stage form if present
-  const root = $('pStage');
-  const nEl = root.querySelector('[data-dn]'), tEl = root.querySelector('[data-dt]');
-  if (nEl) d.n = Math.max(1, Math.min(40, parseInt(nEl.value) || 1));
-  if (tEl) d.target = Math.max(2, Math.min(6, parseInt(tEl.value) || 4));
-  const n = Math.max(1, Math.min(40, Number(d.n) || 1));
-  const target = Math.max(2, Math.min(6, Number(d.target) || 4));
-  const rolls = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6));
-  d.n = n; d.target = target;
-  d.last = {
-    rolls,
-    pass: rolls.filter(r => r >= target).length,
-    ones: rolls.filter(r => r === 1).length,
-    sixes: rolls.filter(r => r === 6).length
-  };
+  const d = play.dice; if (!d) return;
+  readDice();
+  const rolls = Array.from({ length: d.n }, () => 1 + Math.floor(Math.random() * 6));
+  d.last = { rolls, pass: rolls.filter(r => r >= d.target).length, ones: rolls.filter(r => r === 1).length, sixes: rolls.filter(r => r === 6).length };
   showPlay();
 }
 $('pStage').addEventListener('click', e => {
@@ -1087,11 +868,7 @@ $('pStage').addEventListener('click', e => {
   if (ptype === 'mouse') return;
   const el = e.target.closest('[data-tip]'); el && $('pTip')._el !== el ? showTip(el) : hideTip();
 });
-$('pStage').addEventListener('change', e => {
-  const t = e.target, d = play.dice; if (!d) return;
-  if (t.matches('[data-dn]')) d.n = Math.max(1, Math.min(40, parseInt(t.value) || 1));
-  if (t.matches('[data-dt]')) d.target = Math.max(2, Math.min(6, parseInt(t.value) || 4));
-});
+$('pStage').addEventListener('change', e => { if (play.dice && e.target.matches('[data-dn],[data-dt]')) readDice(); });
 
 $('playBtn').onclick = openPlay; $('pClose').onclick = closePlay;
 $('pList').onclick = () => { if (play.list[play.i].ref) play.refOpen = true; renderToc(); $('pToc').hidden = !$('pToc').hidden; };
@@ -1105,32 +882,20 @@ $('pToc').onclick = e => {
 };
 $('pTrack').onclick = e => {
   const btn = e.target.closest('[data-a]'); if (!btn) return;
-  const a = btn.dataset.a;
-  const it = (play.back != null && play.list[play.back] && !play.list[play.back].ref) ? play.list[play.back] : play.list[play.i];
-  if (!it) return;
-  if (a === 'back') { if (play.back != null) play.i = play.back; play.back = null; return showPlay(); }
-  if (a === 'copy') { const k = +btn.dataset.i; play.dice = null; if (play.back != null) { play.back = k; } else play.i = k; return showPlay(); }
+  const a = btn.dataset.a, it = play.list[unitIdx()];
+  if (a === 'copy') { const k = +btn.dataset.i; play.dice = null; if (play.back != null) play.back = k; else play.i = k; return showPlay(); }
   if (a === 'dice') {
-    if (play.dice) { play.dice = null; return showPlay(); }
-    if (play.back != null) { play.i = play.back; play.back = null; }
-    play.dice = { n: 1, target: 4, last: null };
+    if (play.dice) play.dice = null;
+    else { if (play.back != null) { play.i = play.back; play.back = null; } play.dice = { n: 1, target: 4, last: null }; }
     return showPlay();
   }
-  if (a === 'roll') return doRoll();
-  if (a === 'spells') {
-    // Toggle: show matching spell ref card on stage, keep this unit's bottom UI
-    if (play.back != null) {
-      play.i = play.back; play.back = null; play.dice = null;
-      return showPlay();
-    }
-    const src = play.list[play.i];
-    if (src.ref) return;
+  if (a === 'spells') {   // toggle: spell card on stage, this unit's controls stay below
+    if (play.back != null) { play.i = play.back; play.back = null; play.dice = null; return showPlay(); }
+    const src = play.list[play.i]; if (src.ref) return;
     play.dice = null;
     const pk = pickBlock(src, spellBlocks());
     if (!pk) { play.spellMiss = true; return renderTrack(); }
-    play.back = play.i;
-    play.i = pk.idx;
-    return showPlay();
+    play.back = play.i; play.i = pk.idx; return showPlay();
   }
   if (it.ref) return;
   if (a === 'destroy') { play.dead.has(it.sid) ? play.dead.delete(it.sid) : play.dead.add(it.sid); savePlaySoon(); return showPlay(); }
@@ -1138,11 +903,6 @@ $('pTrack').onclick = e => {
   arr[m] = a === 'wound' ? Math.min(it.max, arr[m] + 1) : Math.max(0, arr[m] - 1);
   play.wounds.set(it.sid, arr); savePlaySoon(); renderTrack(); renderToc();
 };
-$('pTrack').addEventListener('change', e => {
-  const t = e.target, d = play.dice; if (!d) return;
-  if (t.matches('[data-dn]')) d.n = Math.max(1, Math.min(40, parseInt(t.value) || 1));
-  if (t.matches('[data-dt]')) d.target = Math.max(2, Math.min(6, parseInt(t.value) || 4));
-});
 let tx = 0, ty = 0;
 $('pStage').addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
 $('pStage').addEventListener('touchend', e => {
@@ -1178,9 +938,8 @@ function makeZip(files) {
   return new Blob([...parts, ...cen, end], { type: 'application/zip' });
 }
 async function cardPng(card, css, vars) {
-  const W = card.offsetWidth, H = card.offsetHeight, S = 300 / 96;
-  const clone = card.cloneNode(true);
-  clone.querySelectorAll('.tool,input').forEach(e => e.remove());
+  const W = card.offsetWidth, H = card.offsetHeight, S = 300 / 96, clone = card.cloneNode(true);
+  clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,input').forEach(e => e.remove());
   const wrap = document.createElement('div');
   wrap.className = 'xw' + (document.body.classList.contains('bordered') ? ' bordered' : '');
   wrap.setAttribute('style', vars); wrap.appendChild(clone);
@@ -1189,42 +948,38 @@ async function cardPng(card, css, vars) {
   await new Promise((ok, no) => { img.onload = ok; img.onerror = () => no(new Error('could not render a card')); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
   const cv = document.createElement('canvas'); cv.width = Math.round(W * S); cv.height = Math.round(H * S);
   cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-  const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
-  return new Uint8Array(await blob.arrayBuffer());
+  return new Uint8Array(await (await new Promise(r => cv.toBlob(r, 'image/png'))).arrayBuffer());
 }
 $('export').onclick = async () => {
   const cards = [...document.querySelectorAll('#grid .shell .card')]; if (!cards.length) return;
   const css = document.querySelector('style').textContent.replace(/body\.bordered/g, '.xw.bordered') +
     '.xw{font:14px/1.4 "Trebuchet MS","Segoe UI",system-ui,sans-serif}.xw .art{background:#fff}.xw .card{box-shadow:none}';
-  const vars = [...FIELDS.map(([id]) => `--${id}:${document.documentElement.style.getPropertyValue('--' + id)}`), ...COLORS.map(([id,,def]) => `--${id}:${document.documentElement.style.getPropertyValue('--' + id) || def}`)].join(';');
+  const root = document.documentElement.style, vars = [...FIELDS.map(([id]) => id), ...COLORS.map(([id]) => id)].map(id => `--${id}:${root.getPropertyValue('--' + id)}`).join(';');
   $('export').disabled = true; const files = [];
   try {
     for (const [i, c] of cards.entries()) {
       status(`Exporting card ${i + 1} of ${cards.length}…`);
       const label = (c.querySelector('.nm .ed') || c.querySelector('.top .ed'))?.textContent || 'card';
-      const slug = label.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'card';
-      files.push({ name: `${String(i + 1).padStart(2, '0')}-${slug}.png`, data: await cardPng(c, css, vars) });
+      files.push({ name: `${String(i + 1).padStart(2, '0')}-${label.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'card'}.png`, data: await cardPng(c, css, vars) });
     }
     const a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files));
-    a.download = ((army?.name || 'cards').replace(/[^\w]+/g, '-') + '-cards.zip'); a.click();
+    a.download = (army?.name || 'cards').replace(/[^\w]+/g, '-') + '-cards.zip'; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     status(`Exported ${cards.length} cards as PNG (300 dpi).`, 'ok');
   } catch (err) { status('Export failed: ' + err.message, 'err'); }
   $('export').disabled = false;
 };
 
-const qid = new URLSearchParams(location.search).get('id');
+// ---------- startup ----------
 (async () => {
   const rec = await idb.get('__text');
   if (rec) {
     for (const [k] of REFS) refText[k] = rec[k] || '';
     document.querySelectorAll('[data-ref]').forEach(ta => { ta.value = refText[ta.dataset.ref]; });
-    (rec.titles || []).forEach(([k, v]) => refTitles.set(k, v)); (rec.smap || []).forEach(([k, v]) => spellMap.set(k, v));
+    (rec.titles || []).forEach(([k, v]) => refTitles.set(k, v));
   }
-  for (const [k] of REFS) for (let bi = 0; bi < 24; bi++) {
-    const key = `ref:${k}:${bi}`, rec2 = await idb.get(key);
-    if (rec2?.src) imgs.set(key, { src: rec2.src, t: { o: 100, x: 0, y: 0, z: 100, ...(rec2.t || {}) } });
-  }
+  for (const [k, v] of await idb.entries('ref:')) if (v?.src) imgs.set(k, { src: v.src, t: { o: 100, x: 0, y: 0, z: 100, ...v.t } });   // reference-card images
+  const qid = new URLSearchParams(location.search).get('id');
   if (qid) { $('url').value = qid; load(); } else render();
 })();
 })();
