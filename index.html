@@ -140,6 +140,7 @@ button{touch-action:manipulation}
 #pTrack .diceui .dres b{color:var(--amber)}
 #pTrack .diceui .drolls{font-size:12px;color:var(--mute);max-width:100%;word-break:break-word}
 #pTrack .pbot>.pspells{grid-column:3;justify-self:start;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+#pTrack .pdice button,#pTrack .pspells > button[data-a=spells]{min-width:7.5em;padding:12px 16px;font-size:15px;box-sizing:border-box;text-align:center}
 #pTrack button{padding:12px 16px;font-size:15px}
 #pTrack .danger,.danger{background:#d9453f;color:#fff}
 .pips{display:flex;gap:5px;flex-wrap:wrap;max-width:100%}
@@ -888,15 +889,33 @@ const spellBlocks = () => {
   return out;
 };
 // single spell list -> it; else remembered choice; else a title that matches the unit's faction name
-const pickBlock = (it, bl) => bl.length === 1 ? bl[0] : bl.find(b => b.rk === spellMap.get(it.aid)) ||
-  bl.find(b => { const t = b.title.toLowerCase(), f = it.fac.toLowerCase(); return f && (t.includes(f) || f.includes(t)); });
+const pickBlock = (it, bl) => {
+  if (!bl.length) return null;
+  if (bl.length === 1) return bl[0];
+  const f = String(it.fac || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!f) return null;
+  let best = null, score = 0;
+  for (const b of bl) {
+    const t = String(b.title || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const bare = t.replace(/\bspells?\b/g, '').replace(/\s+/g, ' ').trim();
+    let s = 0;
+    if (bare === f || t === f) s = 100;
+    else if (t.startsWith(f) || bare.startsWith(f)) s = 80;
+    else if (t.includes(f) || bare.includes(f)) s = 60;
+    else if (f.includes(bare) && bare.length >= 4) s = 40;
+    if (s > score) { score = s; best = b; }
+  }
+  return best;
+};
 const openSpell = b => { play.back = play.i; play.i = b.idx; showPlay(); };
 function renderTrack() {
   const it = play.list[play.i], t = $('pTrack');
   const blocks = spellBlocks();
   if (it.ref) { t.innerHTML = play.back != null ? '<button data-a="back">← Back to unit</button>' : '<span class="pmute">Reference card</span>'; return; }
-  if (play.pick) {
-    t.innerHTML = '<b>Which spell list belongs to this faction?</b>' + blocks.map(b => `<button data-a="pick" data-rk="${esc(b.rk)}">${esc(b.title)}</button>`).join('') + '<button data-a="cancel">Cancel</button>';
+  if (play.spellMiss) {
+    play.spellMiss = false;
+    t.innerHTML = '<span class="pmute">No spell list matches this faction — name a rules card like “Prime Brothers Spells”</span>';
+    setTimeout(() => renderTrack(), 2200);
     return;
   }
   const keep = t.querySelector('.mdls')?.scrollTop || 0, dead = play.dead.has(it.sid);
@@ -931,7 +950,7 @@ function renderTrack() {
     return;
   }
   const spells = it.caster && blocks.length
-    ? `<div class="pspells"><button data-a="spells">✦ Spells</button>${blocks.length > 1 ? '<button data-a="chg" title="Choose a different spell list">⇄</button>' : ''}</div>`
+    ? `<div class="pspells"><button data-a="spells">✦ Spells</button></div>`
     : '';
   const sibs = !it.ref && it.copies > 1
     ? play.list.map((x, k) => ({ x, k })).filter(o => o.x.baseSid === it.baseSid)
@@ -1019,10 +1038,11 @@ $('pTrack').onclick = e => {
     play.dice = d; return renderTrack();
   }
   if (it.ref) return;
-  if (a === 'spells') { const pk = pickBlock(it, spellBlocks()); if (pk) return openSpell(pk); play.pick = true; return renderTrack(); }
-  if (a === 'chg') { play.pick = true; return renderTrack(); }
-  if (a === 'cancel') { play.pick = false; return renderTrack(); }
-  if (a === 'pick') { spellMap.set(it.aid, btn.dataset.rk); saveText(); const b = spellBlocks().find(b => b.rk === btn.dataset.rk); play.pick = false; return b ? openSpell(b) : renderTrack(); }
+  if (a === 'spells') {
+    const pk = pickBlock(it, spellBlocks());
+    if (pk) return openSpell(pk);
+    play.spellMiss = true; return renderTrack();
+  }
   if (a === 'destroy') { play.dead.has(it.sid) ? play.dead.delete(it.sid) : play.dead.add(it.sid); savePlaySoon(); return showPlay(); }
   const arr = [...modelsOf(it)], m = +btn.dataset.m;
   arr[m] = a === 'wound' ? Math.min(it.max, arr[m] + 1) : Math.max(0, arr[m] - 1);
