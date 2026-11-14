@@ -587,40 +587,25 @@ function render() {
   $('grid').innerHTML = html + r.html;
   $('print').disabled = $('export').disabled = $('playBtn').disabled = !(printed + r.n);
   $('info').textContent = [unique && `${unique} unit cards`, printed > unique && `${printed} printed`, r.n && `${r.n} reference cards`].filter(Boolean).join(' · ');
+  attachCamera();
 }
 
 // ---------- events ----------
 const status = (m, k) => { $('status').textContent = m || ''; $('status').className = k || ''; };
-async function openCamera(card) {
-  if (!navigator.mediaDevices?.getUserMedia) return status('Camera not available in this browser.', 'err');
-  const sid = card.dataset.sid; if (!sid) return;
-  const body = card.querySelector('.body') || card;
-  // tear down any existing on-card camera
-  card.querySelectorAll('.camfeed,.cambar').forEach(e => e.remove());
-  card.classList.remove('cam-on');
-  let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
-  catch (err) { return status('Camera permission denied or unavailable.', 'err'); }
-  const video = document.createElement('video');
-  video.className = 'camfeed'; video.setAttribute('playsinline', ''); video.muted = true; video.autoplay = true;
-  const bar = document.createElement('div');
-  bar.className = 'cambar';
-  bar.innerHTML = '<button type="button" data-shot>Capture</button><button type="button" class="danger" data-cancel>Cancel</button>';
-  // Camera sits under card UI (name, rules, stats stay visible)
-  const ov = body.querySelector('.ov, .top, .rb');
-  if (ov) body.insertBefore(video, body.firstChild);
-  else body.appendChild(video);
-  body.appendChild(bar);
-  card.classList.add('cam-on');
-  video.srcObject = stream;
-  const stop = () => {
-    stream.getTracks().forEach(t => t.stop());
-    video.remove(); bar.remove();
-    card.classList.remove('cam-on');
-  };
-  bar.querySelector('[data-cancel]').onclick = e => { e.stopPropagation(); stop(); };
+let cam = null; // { stream, sid } — stream stays live until Cancel / Capture / play mode
+function stopCamera() {
+  if (!cam) return;
+  try { cam.stream.getTracks().forEach(t => t.stop()); } catch (_) {}
+  document.querySelectorAll('.camfeed,.cambar').forEach(e => e.remove());
+  document.querySelectorAll('.card.cam-on').forEach(c => c.classList.remove('cam-on'));
+  cam = null;
+}
+function bindCamControls(card, video, bar) {
+  const sid = cam.sid;
+  bar.querySelector('[data-cancel]').onclick = e => { e.stopPropagation(); stopCamera(); };
   bar.querySelector('[data-shot]').onclick = e => {
     e.stopPropagation();
+    if (!cam) return;
     const w = video.videoWidth || 756, h = video.videoHeight || 1056;
     const aspect = (card.clientWidth || 63) / (card.clientHeight || 88);
     let sw = w, sh = h, sx = 0, sy = 0;
@@ -630,8 +615,37 @@ async function openCamera(card) {
     imgs.set(sid, { src: cv.toDataURL('image/jpeg', 0.92), t: { o: 100, x: 0, y: 0, z: 100 } });
     const u = army?.units?.find(u => String(sidOf(u)) === sid);
     if (u) saveImg(u); else idb.set(sid, imgs.get(sid));
-    stop(); render();
+    stopCamera(); render();
   };
+}
+function attachCamera() {
+  if (!cam) return;
+  const card = document.querySelector(`.card[data-sid="${CSS.escape(cam.sid)}"]`);
+  if (!card) return; // card not on screen; keep stream until cancel
+  const body = card.querySelector('.body') || card;
+  card.querySelectorAll('.camfeed,.cambar').forEach(e => e.remove());
+  const video = document.createElement('video');
+  video.className = 'camfeed'; video.setAttribute('playsinline', ''); video.muted = true; video.autoplay = true;
+  video.srcObject = cam.stream;
+  const bar = document.createElement('div');
+  bar.className = 'cambar';
+  bar.innerHTML = '<button type="button" data-shot>Capture</button><button type="button" class="danger" data-cancel>Cancel</button>';
+  body.insertBefore(video, body.firstChild);
+  body.appendChild(bar);
+  card.classList.add('cam-on');
+  video.play().catch(() => {});
+  bindCamControls(card, video, bar);
+}
+async function openCamera(card) {
+  if (!navigator.mediaDevices?.getUserMedia) return status('Camera not available in this browser.', 'err');
+  const sid = card.dataset.sid; if (!sid) return;
+  if (cam && cam.sid === sid) return attachCamera(); // already live for this card
+  stopCamera();
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
+  catch (err) { return status('Camera permission denied or unavailable.', 'err'); }
+  cam = { stream, sid };
+  attachCamera();
 }
 const ask = (msg, cur) => { const v = prompt(msg, cur); return v && v.trim() && v.trim() !== cur ? v.trim() : null; };
 const sidFrom = el => el.closest('[data-sid]').dataset.sid;
@@ -829,6 +843,7 @@ function buildLookup() {
   return m;
 }
 function openPlay() {
+  stopCamera();
   play.list = [...document.querySelectorAll('#grid .shell .card')].flatMap(c => {
     const ref = c.classList.contains('ref');
     const caster = !ref && [...c.querySelectorAll('.chip')].some(ch => ruleBase(ch.dataset.rule || ch.textContent).toLowerCase() === 'caster');
