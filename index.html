@@ -156,10 +156,24 @@ body.bordered .card{border:var(--bw) solid #000}
 .rl,.wr{cursor:help}.wr{border-bottom:.2mm dotted #333}
 #pTip{position:fixed;z-index:120;max-width:min(340px,90vw);background:#fff;color:#111;border-radius:8px;padding:8px 11px;box-shadow:0 6px 24px rgba(0,0,0,.6);pointer-events:none;font-size:13px;line-height:1.35}
 #pTip b{display:block;margin-bottom:2px}#pTip p{margin:0}
+/* settings window */
+#settings{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:12px}
+.sbox{width:min(720px,100%);max-height:min(88vh,100%);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+.shead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:2px solid var(--amber)}
+.shead h2{margin:0;font:800 16px/1 "Arial Narrow","Franklin Gothic Medium",Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+.stabs{display:flex;gap:6px;padding:10px 14px 0}
+.stabs button{background:var(--ink);color:#e8eaee;padding:7px 14px}
+.stabs button.on{background:var(--amber);color:#111}
+.sbody{overflow:auto;padding:6px 16px 16px;line-height:1.5}
+.sbody h3{margin:16px 0 4px;color:var(--amber);font-size:14px}
+.sbody h3:first-child{margin-top:8px}
+.sbody p,.sbody ul{margin:4px 0;color:#d4d8de}
+.sbody ul{padding-left:20px}
+.sbody code{background:var(--ink);padding:1px 5px;border-radius:3px}
 @page{size:A4;margin:8mm}
 @media print{
  .art{background:#fff}
- body{background:#fff}header,.wrap,.ctl,.tool,#play{display:none!important}
+ body{background:#fff}header,.wrap,.ctl,.tool,#play,#settings{display:none!important}
  #grid{display:block;padding:0}
  .shell,.print-only{display:block;float:left;margin:2mm;break-inside:avoid}
  .card{box-shadow:none}
@@ -178,7 +192,7 @@ body.bordered .card{border:var(--bw) solid #000}
   <button id="playBtn" disabled>▶ Play</button>
   <button id="export" disabled>Export PNGs</button>
   <button id="print" disabled>Print</button>
-  <button id="wipe" class="danger" title="Delete all saved lists, images and rules text on this device">Delete all data</button>
+  <button id="settingsBtn">⚙ Settings</button>
 </header>
 <div class="wrap">
   <div id="status"></div>
@@ -195,6 +209,66 @@ body.bordered .card{border:var(--bw) solid #000}
   <p class="hint" id="info"></p>
 </div>
 <div id="grid"></div>
+<div id="settings" hidden>
+  <div class="sbox" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="shead"><h2>Settings</h2><button id="sClose">✕ Close</button></div>
+    <div class="stabs"><button data-tab="readme" class="on">Readme</button><button data-tab="data">Data</button></div>
+    <div class="sbody">
+      <div class="spane" data-pane="readme">
+        <h3>What this is</h3>
+        <p>Card Forge turns an Army Forge list into printable unit cards, and doubles as a tabletop companion: Play mode shows one big card at a time with wound tracking, dice and rule popups. It's an unofficial fan tool and isn't affiliated with One Page Rules. Rules text isn't included, so you paste your own.</p>
+
+        <h3>Getting started</h3>
+        <ul>
+          <li>In Army Forge use <b>Share as Link</b>, paste the link into the box at the top and press <b>Import</b>. You need a connection to import.</li>
+          <li>Every list you import is saved on this device. Click the link box to open the <b>saved lists</b> and pick one to bring it back with its play state, with no connection needed. Paste the link and import again to refresh a list; your play state is kept. <b>✕</b> removes a list.</li>
+        </ul>
+
+        <h3>Unit cards</h3>
+        <ul>
+          <li>One card per unit. Combined units are merged into one card and identical units are collapsed.</li>
+          <li><b>Click to rename:</b> a unit name, the faction label (renames it for the whole army), a special rule or a weapon. Rule and weapon renames only apply to that faction, and values in brackets stay fixed.</li>
+          <li><b>Play qty</b> under a card is how many copies of that unit appear in Play mode and in print (up to 20).</li>
+          <li><b>Images:</b> hover a card and press <b>Image</b> to pick from your library or use the camera (Capture or Cancel on the live preview). Sliders under the card set opacity, position and zoom. Images are saved per exact unit (name, stats and loadout), so two units with the same name keep their own pictures. A unit with no image of its own picks up the first image saved for that name. <b>Remove saved image</b> clears it.</li>
+        </ul>
+
+        <h3>Reference cards</h3>
+        <ul>
+          <li>Open <b>Reference cards</b> and paste text into Core Special Rules, Faction Special Rules and Faction Spells. Write one rule per line as <code>Name:description</code>.</li>
+          <li>In Faction Special Rules and Faction Spells, leave a <b>blank line between factions</b>. Each faction gets its own cards and its own title; click a title to rename it. Long lists split across cards automatically.</li>
+          <li>Reference cards can have images too, with the same sliders and Remove button.</li>
+          <li>If you rename a rule on a unit card, change it in your pasted text as well so the Play mode popups still match. The pasted text is saved automatically.</li>
+        </ul>
+
+        <h3>Layout &amp; sizes</h3>
+        <p>Card size, text sizes and colours for every part of the card, an optional black border (default 3 mm, like a trading card), and a one-rule-per-line option.</p>
+
+        <h3>Play mode</h3>
+        <ul>
+          <li><b>▶ Play</b> shows one card at a time. Swipe, use the side arrows or the ← → keys. <b>☰ Cards</b> opens the contents list, with the reference cards in a dropdown. <b>Exit</b> or Esc leaves.</li>
+          <li><b>Wounds:</b> units with Tough get a − / + box per model. When every model is out of wounds, a red <b>DESTROYED</b> stamp appears; healing removes it. Units without Tough aren't tracked.</li>
+          <li><b>Pin / Unpin</b> puts a PINNED stamp on a unit.</li>
+          <li>Several copies (Play qty above 1) get their own tracking, with Unit 1, Unit 2… buttons to switch.</li>
+          <li><b>Dice</b> rolls any number of d6 against a target and counts successes, 1s and 6s.</li>
+          <li><b>Spells</b> appears on units with Caster and shows that faction's spell cards. With several spell lists, it picks the one whose title contains the unit's faction name, so name them to match, for example "Prime Brothers Spells". Tap Spells again to return.</li>
+          <li>Hover (or tap) a special rule, or a rule inside a weapon's stats, to read its description from your pasted text.</li>
+          <li>Wounds, pins and renames are saved with the list.</li>
+        </ul>
+
+        <h3>Print &amp; export</h3>
+        <p><b>Print</b> lays the cards out on A4, one copy per Play qty. <b>Export PNGs</b> saves every card as a 300 dpi image in a single zip.</p>
+
+        <h3>Install &amp; your data</h3>
+        <p>You can add the app to your home screen and open it offline. Saved lists, images, play state and pasted text live only in this browser on this device, so they won't appear on another device and are lost if you clear your browser's site data.</p>
+      </div>
+      <div class="spane" data-pane="data" hidden>
+        <h3>Delete all data</h3>
+        <p>Removes everything Card Forge has saved on this device: saved lists, play state, images, renamed titles and your pasted rules text. This can't be undone. You'll be asked to confirm first.</p>
+        <p><button id="wipe" class="danger">Delete all data</button></p>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="play" hidden>
   <div class="pbar"><button id="pList">☰ Cards</button><span id="pPos"></span><button id="pClose">✕ Exit</button></div>
   <aside id="pToc" hidden></aside>
@@ -700,6 +774,15 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.imgmenu') && e.target.dataset.up === undefined) document.querySelectorAll('.imgmenu').forEach(m => { m.hidden = true; });
 });
 $('print').onclick = () => print();
+const showTab = n => {
+  document.querySelectorAll('.stabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === n));
+  document.querySelectorAll('.spane').forEach(p => { p.hidden = p.dataset.pane !== n; });
+};
+const closeSettings = () => { $('settings').hidden = true; };
+$('settingsBtn').onclick = () => { showTab('readme'); $('settings').hidden = false; };
+$('sClose').onclick = closeSettings;
+$('settings').addEventListener('click', e => { if (e.target === $('settings')) closeSettings(); else if (e.target.dataset.tab) showTab(e.target.dataset.tab); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('settings').hidden) closeSettings(); });
 $('wipe').onclick = async () => {
   if (!confirm('Delete ALL Card Forge data on this device?\n\nThis removes saved lists, play state, images and pasted rules text, and cannot be undone.')) return;
   clearTimeout(_saveT); clearTimeout(timer); stopCamera(); army = null; listId = null;
@@ -745,7 +828,10 @@ function linkRules(root) {
   const L = play.lookup; if (!L.size) return;
   root.querySelectorAll('.chip').forEach(ch => {
     const k = [ch.textContent, ch.dataset.rule || ''].map(x => ruleBase(x).toLowerCase()).find(x => L.has(x));
-    if (k) { ch.dataset.tip = k; ch.classList.add('rl'); }
+    if (!k) return;
+    ch.dataset.tip = k; ch.classList.add('rl');
+    const shown = ruleBase(ch.textContent);   // renamed on the card but described under its old name -> show the alias in the popup
+    if (shown.toLowerCase() !== ruleBase(L.get(k).name).toLowerCase()) ch.dataset.alias = shown;
   });
   root.querySelectorAll('.wpn').forEach(w => {
     const txt = w.textContent, i = txt.indexOf(' ('), j = txt.lastIndexOf(')'); if (i < 0 || j < i) return;
@@ -865,7 +951,7 @@ function go(d) {
 // rule description popup: hover on desktop, tap on touch
 function showTip(el) {
   const e = el && play.lookup.get(el.dataset.tip); if (!e) return hideTip();
-  const tp = $('pTip'); tp.innerHTML = `<b>${esc(e.name)}</b><p>${esc(e.desc || '—')}</p>`; tp.hidden = false;
+  const tp = $('pTip'); tp.innerHTML = `<b>${esc(e.name)}${el.dataset.alias ? ` [${esc(el.dataset.alias)}]` : ''}</b><p>${esc(e.desc || '—')}</p>`; tp.hidden = false;
   const r = el.getBoundingClientRect(), w = tp.offsetWidth, h = tp.offsetHeight;
   let top = r.bottom + 8; if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 8);
   tp.style.top = top + 'px'; tp.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px'; tp._el = el;
