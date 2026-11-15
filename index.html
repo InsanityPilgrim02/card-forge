@@ -123,7 +123,9 @@ body.bordered .card{border:var(--bw) solid #000}
 .dice-stage .dres b{color:var(--amber);font-size:5mm}
 .dice-stage .drolls{margin-top:2mm;font-size:2.8mm;color:var(--mute);word-break:break-word}
 .pwrap.dead .card{filter:grayscale(1) brightness(.55)}
-.pwrap.dead::after{content:"DESTROYED";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-18deg);padding:6px 14px;border:4px solid #e0443e;border-radius:8px;color:#e0443e;font:900 34px/1 Arial,sans-serif;letter-spacing:.1em;background:rgba(0,0,0,.6)}
+.pwrap.dead::after,.pwrap.pinned::after{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-18deg);padding:6px 14px;border:4px solid;border-radius:8px;font:900 34px/1 Arial,sans-serif;letter-spacing:.1em;background:rgba(0,0,0,.6)}
+.pwrap.dead::after{content:"DESTROYED";color:#e0443e}
+.pwrap.pinned::after{content:"PINNED";color:var(--amber)}
 .pnav{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:44px;height:84px;font-size:34px;padding:0;background:rgba(0,0,0,.6);color:#fff}
 #pPrev{left:4px}#pNext{right:4px}
 .pnav:disabled{opacity:.15}
@@ -131,11 +133,11 @@ body.bordered .card{border:var(--bw) solid #000}
 #pTrack .pbody{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:4px 2px}
 #pTrack .pbot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;column-gap:8px;width:100%;flex:none}
 #pTrack .pbot>.pdice{grid-column:1;justify-self:end;min-width:0;display:flex;justify-content:flex-end}
-#pTrack .pbot>[data-a=destroy]{grid-column:2;justify-self:center;min-width:0}
+#pTrack .pbot>[data-a=pin]{grid-column:2;justify-self:center;min-width:0}
 #pTrack .pbot>.pspells{grid-column:3;justify-self:start;min-width:0;display:flex;justify-content:flex-start}
 #pTrack .pbot>.pempty{grid-column:3;min-width:0}
 #pTrack .pbot>button,#pTrack .pdice button,#pTrack .pspells>button{width:6.75em;height:42px;padding:0 10px;font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
-#pTrack .pdice button.on,#pTrack .pspells>button.on{box-shadow:0 0 0 2px var(--amber);background:#333}
+#pTrack .pdice button.on,#pTrack .pspells>button.on,#pTrack .pbot>[data-a=pin].on{box-shadow:0 0 0 2px var(--amber);background:#333}
 .danger{background:#d9453f;color:#fff}
 .pips{display:flex;gap:5px;flex-wrap:wrap;max-width:100%}
 .pips i{width:16px;height:16px;border-radius:50%;border:2px solid var(--amber)}.pips i.on{background:var(--amber)}
@@ -176,6 +178,7 @@ body.bordered .card{border:var(--bw) solid #000}
   <button id="playBtn" disabled>▶ Play</button>
   <button id="export" disabled>Export PNGs</button>
   <button id="print" disabled>Print</button>
+  <button id="wipe" class="danger" title="Delete all saved lists, images and rules text on this device">Delete all data</button>
 </header>
 <div class="wrap">
   <div id="status"></div>
@@ -247,15 +250,27 @@ const idb = (() => {
     t.oncomplete = () => ok(rq.result); t.onerror = () => no(t.error); }); };
   return { get: k => tx('readonly', s => s.get(k)).catch(() => null), set: (k, v) => tx('readwrite', s => s.put(v, k)).catch(() => {}),
     del: k => tx('readwrite', s => s.delete(k)).catch(() => {}),
+    wipe: async () => { try { (await open()).close(); } catch (_) {} p = null;
+      await new Promise(ok => { const r = indexedDB.deleteDatabase('opr-card-forge'); r.onsuccess = r.onerror = r.onblocked = () => ok(); }); },
     entries: pre => open().then(db => new Promise((ok, no) => {   // all [key, value] pairs under a prefix, one transaction
       const t = db.transaction('imgs'), s = t.objectStore('imgs'), r = IDBKeyRange.bound(pre, pre + '\uffff'), k = s.getAllKeys(r), v = s.getAll(r);
       t.oncomplete = () => ok(k.result.map((x, i) => [x, v.result[i]])); t.onerror = () => no(t.error); })).catch(() => []) };
 })();
+// Unit images are stored per exact unit (name + stats + loadout), so two same-named units each keep their own picture.
+// The plain name is a fallback: a variant with no image of its own (e.g. in another list) picks up the first image saved for that name.
+const hash = s => { let h = 5381; for (const c of s) h = ((h << 5) + h + c.charCodeAt(0)) | 0; return (h >>> 0).toString(36); };
 const imgKey = u => String(u.genericName || u.name || '').toLowerCase().trim();
+const imgKeys = u => [imgKey(u) + '|' + hash([u.quality, u.defense, toughOf(u), u.size, costOf(u), rulesOf(u).sort().join(), weaponsOf(u).join()].join('~')), imgKey(u)];
 const unitBySid = sid => army?.units?.find(u => String(sidOf(u)) === sid);
-function saveImgFor(sid) {   // unit images are shared by unit name; reference-card images by their card key
-  const u = unitBySid(sid), im = imgs.get(u ? sidOf(u) : sid), k = u ? imgKey(u) : sid;
-  if (im && k) idb.set(k, im);
+async function saveImgFor(sid) {   // reference-card images use their card key
+  const u = unitBySid(sid), im = imgs.get(u ? sidOf(u) : sid); if (!im) return;
+  if (!u) return idb.set(sid, im);
+  if (!imgKey(u)) return;
+  const [sk, nk] = imgKeys(u); await idb.set(sk, im); if (!(await idb.get(nk))) await idb.set(nk, im);
+}
+function forgetImg(sid) {
+  const u = unitBySid(sid); imgs.delete(u ? sidOf(u) : sid);
+  if (u) idb.set(imgKeys(u)[0], { gone: true }); else idb.del(sid);   // the marker stops the name fallback bringing the image back
 }
 const saveText = () => idb.set('__text', { ...refText, titles: [...refTitles] });
 
@@ -263,10 +278,10 @@ const saveText = () => idb.set('__text', { ...refText, titles: [...refTitles] })
 const listKey = id => `__list:${id}`, stateKey = id => `__state:${id}`;
 const listIndex = async () => (await idb.get('__lists')) || [];
 const loadState = async id => (await idb.get(stateKey(id))) || (await idb.get(listKey(id)))?.state;   // older saves kept state inside the list
-const snapState = () => ({ wounds: [...play.wounds], dead: [...play.dead], playI: play.i,
+const snapState = () => ({ wounds: [...play.wounds], pinned: [...play.pinned], playI: play.i,
   names: [...names], facs: [...facs], qty: [...qty], ruleNames: [...ruleNames], wpnNames: [...wpnNames] });
 function applyState(st = {}) {
-  play.wounds = new Map(st.wounds || []); play.dead = new Set(st.dead || []); play.i = st.playI || 0;
+  play.wounds = new Map(st.wounds || []); play.pinned = new Set(st.pinned || []); play.i = st.playI || 0;
   for (const [m, k] of [[names, 'names'], [facs, 'facs'], [qty, 'qty'], [ruleNames, 'ruleNames'], [wpnNames, 'wpnNames']]) { m.clear(); (st[k] || []).forEach(([a, b]) => m.set(a, b)); }
 }
 async function persistList(full) {
@@ -280,8 +295,9 @@ async function persistList(full) {
 }
 let _saveT; const savePlaySoon = () => { clearTimeout(_saveT); _saveT = setTimeout(() => persistList(), 250); };
 async function restoreImgs(units) {
-  const recs = await Promise.all(units.map(u => idb.get(imgKey(u)))); let n = 0;
-  units.forEach((u, i) => { if (recs[i]) { imgs.set(sidOf(u), { src: recs[i].src, t: { ...recs[i].t } }); n++; } });
+  const recs = await Promise.all(units.map(async u => { const [sk, nk] = imgKeys(u), r = await idb.get(sk); return r ? (r.src ? r : null) : idb.get(nk); }));
+  let n = 0;
+  units.forEach((u, i) => { if (recs[i]?.src) { imgs.set(sidOf(u), { src: recs[i].src, t: { ...recs[i].t } }); n++; } });
   return n;
 }
 async function applyList(entry, state, fromNet) {
@@ -295,7 +311,7 @@ async function applyList(entry, state, fromNet) {
   const restored = await restoreImgs(army.units || []);
   status(`${fromNet ? 'Imported' : 'Restored'} “${army.name || listId}” · ${(army.units || []).length} units · ${army.listPoints ?? '?'} pts` +
     (restored ? ` · ${restored} image${restored > 1 ? 's' : ''}` : '') +
-    (state && ((state.wounds || []).length || (state.dead || []).length) ? ' · play state restored' : ''), 'ok');
+    (state && ((state.wounds || []).length || (state.pinned || []).length) ? ' · play state restored' : ''), 'ok');
   await persistList(fromNet); render();
 }
 async function showDrop() {
@@ -434,7 +450,8 @@ const factionOf = u => facs.get(armyKey(u)) || bookNames.get(u?.armyId) || infer
 const nameOf = u => names.get(sidOf(u)) || u.customName || u.name || u.genericName || 'Unit';
 
 // ---------- rendering ----------
-const tVars = t => t ? `--o:${t.o / 100};--x:${t.x}%;--y:${t.y}%;--z:${t.z / 100}` : '';
+const tProps = t => ({ '--o': t.o / 100, '--x': t.x + '%', '--y': t.y + '%', '--z': t.z / 100 });
+const tVars = t => t ? Object.entries(tProps(t)).map(([k, v]) => `${k}:${v}`).join(';') : '';
 const artHtml = im => im ? `<img class="art" src="${im.src}" alt="" draggable="false">` : '<div class="art"></div>';
 const IMG_UI = `<button class="tool" data-up>Image</button>
       <div class="imgmenu" hidden><button type="button" data-gal>Library</button><button type="button" data-cam>Camera</button></div>
@@ -456,9 +473,9 @@ function cardHtml(u) {
       ${IMG_UI}
     </div></article>`;
 }
-function ctlHtml(u) {
-  const sid = sidOf(u), im = imgs.get(sid);
-  return `<div class="ctl"><div><span>Play qty</span><input type="number" min="1" max="20" value="${qty.get(sid) || 1}" data-q>${im ? '<button data-rm class="rm">Remove saved image</button>' : ''}</div>` +
+function ctlHtml(sid, isUnit) {   // unit cards: qty + image tools; reference cards: image tools once an image is set
+  const im = imgs.get(sid); if (!isUnit && !im) return '';
+  return `<div class="ctl"><div>${isUnit ? `<span>Play qty</span><input type="number" min="1" max="20" value="${qty.get(sid) || 1}" data-q>` : '<span>Image</span>'}${im ? '<button data-rm class="rm">Remove saved image</button>' : ''}</div>` +
     (im ? TR.map(([k, l, mn, mx]) => `<div><span>${l}</span><input type="range" min="${mn}" max="${mx}" value="${im.t[k]}" data-tr="${k}"></div>`).join('') : '') + '</div>';
 }
 
@@ -514,7 +531,7 @@ function refCards() {
             <div class="top"><span class="ed" data-title="${key}" data-cur="${esc(title)}">${esc(title)}${pages.length > 1 ? ` (${i + 1}/${pages.length})` : ''}</span></div>
             <div class="rb">${p.map(entryHtml).join('')}</div>
             ${IMG_UI}
-          </div></article></div>`;
+          </div></article>${ctlHtml(sid, false)}</div>`;
       });
     });
   }
@@ -526,7 +543,7 @@ function render() {
   let html = '', unique = 0, printed = 0;
   if (army) for (const u of prepare(army.units || [])) {
     const q = qty.get(sidOf(u)) || 1; unique++; printed += q;
-    html += `<div class="shell">${cardHtml(u)}${ctlHtml(u)}</div>`;
+    html += `<div class="shell">${cardHtml(u)}${ctlHtml(sidOf(u), true)}</div>`;
     for (let i = 1; i < q; i++) html += `<div class="print-only">${cardHtml(u)}</div>`;
   }
   const r = refCards();
@@ -598,7 +615,7 @@ $('grid').addEventListener('click', e => {
     if (!c) return;
     c === orig ? map.delete(k) : map.set(k, c); savePlaySoon(); render();
   };
-  if (t.dataset.rm !== undefined) { const u = unitBySid(sid); imgs.delete(sidOf(u)); idb.del(imgKey(u)); return render(); }
+  if (t.dataset.rm !== undefined) { forgetImg(sid); return render(); }
   if (t.dataset.rule !== undefined) return rename(ruleNames, ruleBase(t.dataset.rule), 'Rename rule');
   if (t.dataset.wpn !== undefined) return rename(wpnNames, parseWpn(t.dataset.wpn).name, 'Rename weapon');
   if (t.dataset.nm !== undefined) {
@@ -626,7 +643,7 @@ $('grid').addEventListener('change', e => {
 $('grid').addEventListener('input', e => {   // live image sliders
   const t = e.target; if (!t.matches('[data-tr]')) return;
   const card = t.closest('.shell').querySelector('.card'), u = unitBySid(card.dataset.sid), im = imgs.get(u ? sidOf(u) : card.dataset.sid); if (!im) return;
-  im.t[t.dataset.tr] = Number(t.value); card.style.cssText = tVars(im.t);
+  im.t[t.dataset.tr] = Number(t.value); Object.entries(tProps(im.t)).forEach(([k, v]) => card.style.setProperty(k, v));
 });
 let timer;
 document.querySelectorAll('[data-ref]').forEach(ta => ta.addEventListener('input', () => {
@@ -683,11 +700,17 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.imgmenu') && e.target.dataset.up === undefined) document.querySelectorAll('.imgmenu').forEach(m => { m.hidden = true; });
 });
 $('print').onclick = () => print();
+$('wipe').onclick = async () => {
+  if (!confirm('Delete ALL Card Forge data on this device?\n\nThis removes saved lists, play state, images and pasted rules text, and cannot be undone.')) return;
+  clearTimeout(_saveT); clearTimeout(timer); stopCamera(); army = null; listId = null;
+  await idb.wipe(); location.replace(location.pathname);
+};
 
-// ---------- play mode: one big card, swipe/arrows/contents, per-model toughness, destroy, dice, spells, rule popups ----------
-const play = { on: false, i: 0, list: [], wounds: new Map(), dead: new Set(), lookup: new Map(), refOpen: false, back: null, dice: null };
+// ---------- play mode: one big card, swipe/arrows/contents, per-model toughness, pin, dice, spells, rule popups ----------
+const play = { on: false, i: 0, list: [], wounds: new Map(), pinned: new Set(), lookup: new Map(), refOpen: false, back: null, dice: null };
 const modelsOf = it => play.wounds.get(it.sid) || Array(it.n).fill(0);   // wounds lost per model
 const aliveOf = it => modelsOf(it).filter(l => l < it.max).length;
+const isDestroyed = it => it.max > 0 && aliveOf(it) === 0;   // every model out of wounds (units without Tough aren't tracked)
 const isPrimary = x => x.ref || x.copy === 1;   // extra copies of a unit are reached with the Unit 1/2/… buttons
 // controls follow the unit even while its spell card is on the stage
 const unitIdx = () => { const b = play.list[play.back]; return b && !b.ref ? play.back : play.i; };
@@ -757,7 +780,7 @@ function showPlay() {
     clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,input').forEach(e => e.remove());
     clone.querySelectorAll('.ed').forEach(e => e.classList.remove('ed'));
     linkRules(clone);
-    wrap.className = 'pwrap' + (play.dead.has(view.sid) ? ' dead' : ''); wrap.appendChild(clone);
+    wrap.className = 'pwrap' + (isDestroyed(view) ? ' dead' : play.pinned.has(view.sid) ? ' pinned' : ''); wrap.appendChild(clone);
   }
   $('pStage').replaceChildren(wrap);
   renderTrack(); renderToc(); fitPlay();
@@ -791,10 +814,10 @@ function pickBlock(it, bl) {
   return best;
 }
 function renderTrack() {
-  const it = play.list[unitIdx()], t = $('pTrack'), blocks = spellBlocks(), dead = play.dead.has(it.sid), spellOn = play.back != null && play.list[play.i].ref;
+  const it = play.list[unitIdx()], t = $('pTrack'), blocks = spellBlocks(), pinned = play.pinned.has(it.sid), spellOn = play.back != null && play.list[play.i].ref;
   if (it.ref) { t.innerHTML = '<div class="pbody"><span class="pmute">Reference card</span></div><div class="pbot"></div>'; return; }
   const pbot = `<div class="pbot"><div class="pdice"><button type="button" data-a="dice" class="${play.dice ? 'on' : ''}">Dice</button></div>
-    <button type="button" data-a="destroy" class="${dead ? '' : 'danger'}">${dead ? 'Restore' : 'Destroy'}</button>
+    <button type="button" data-a="pin" class="${pinned ? 'on' : ''}">${pinned ? 'Unpin' : 'Pin'}</button>
     ${it.caster && blocks.length ? `<div class="pspells"><button type="button" data-a="spells" class="${spellOn ? 'on' : ''}">Spells</button></div>` : '<div class="pempty"></div>'}</div>`;
   const sibs = it.copies > 1 ? play.list.map((x, k) => [x, k]).filter(([x]) => x.baseSid === it.baseSid) : [];
   const unitNav = sibs.length > 1 ? `<div class="ucopies">${sibs.map(([x, k]) =>
@@ -811,8 +834,8 @@ function renderTrack() {
       const left = it.max - l;
       return `<div class="mdl${left < 1 ? ' gone' : ''}"><span>M${m + 1}</span>
         <div class="pips">${Array.from({ length: it.max }, (_, k) => `<i class="${k < left ? 'on' : ''}"></i>`).join('')}</div>
-        <button data-a="wound" data-m="${m}" ${left < 1 || dead ? 'disabled' : ''}>−</button>
-        <button data-a="heal" data-m="${m}" ${l < 1 || dead ? 'disabled' : ''}>+</button></div>`;
+        <button data-a="wound" data-m="${m}" ${left < 1 ? 'disabled' : ''}>−</button>
+        <button data-a="heal" data-m="${m}" ${l < 1 ? 'disabled' : ''}>+</button></div>`;
     }).join('');
     head = `<b class="${aliveOf(it) < 1 ? 'out' : ''}">Models ${aliveOf(it)} / ${it.n} · Tough ${it.max} each</b>`;
   }
@@ -822,13 +845,13 @@ function renderTrack() {
 function renderToc() {
   let nu = 0, nr = 0;
   const row = (it, k) => {
-    const dead = play.dead.has(it.sid), num = it.ref ? ++nr : ++nu;
-    const info = dead ? 'destroyed' : !it.max ? '' : it.n > 1 ? `${aliveOf(it)}/${it.n} models` : `${it.max - modelsOf(it)[0]}/${it.max}`;
+    const dead = isDestroyed(it), pin = play.pinned.has(it.sid), num = it.ref ? ++nr : ++nu;
+    const info = dead ? 'destroyed' : pin ? 'pinned' : !it.max ? '' : it.n > 1 ? `${aliveOf(it)}/${it.n} models` : `${it.max - modelsOf(it)[0]}/${it.max}`;
     return `<button data-k="${k}" class="${k === play.i ? 'cur' : ''}${dead ? ' x' : ''}"><span>${num}</span><em>${esc(it.name)}</em><small>${info}</small></button>`;
   };
   const units = play.list.map((it, k) => it.ref ? '' : row(it, k)).join(''), refs = play.list.map((it, k) => it.ref ? row(it, k) : '').join(''), nRef = play.list.filter(x => x.ref).length;
   $('pToc').innerHTML = units + (nRef ? `<button data-k="refs" class="rhd"><em>Reference cards (${nRef})</em><b>${play.refOpen ? '▾' : '▸'}</b></button>${play.refOpen ? refs : ''}` : '')
-    + '<button data-k="reset" class="rst">Reset all wounds &amp; restore units</button>';
+    + '<button data-k="reset" class="rst">Reset all wounds &amp; unpin units</button>';
 }
 // arrows/swipe move within the current group: unit cards, or reference cards
 function go(d) {
@@ -876,7 +899,7 @@ $('pPrev').onclick = () => go(-1); $('pNext').onclick = () => go(1);
 $('pToc').onclick = e => {
   const b = e.target.closest('[data-k]'); if (!b) return;
   if (b.dataset.k === 'refs') { play.refOpen = !play.refOpen; return renderToc(); }
-  if (b.dataset.k === 'reset') { play.wounds.clear(); play.dead.clear(); savePlaySoon(); }
+  if (b.dataset.k === 'reset') { play.wounds.clear(); play.pinned.clear(); savePlaySoon(); }
   else { play.i = +b.dataset.k; play.back = null; $('pToc').hidden = true; }
   showPlay();
 };
@@ -898,10 +921,13 @@ $('pTrack').onclick = e => {
     play.back = play.i; play.i = pk.idx; return showPlay();
   }
   if (it.ref) return;
-  if (a === 'destroy') { play.dead.has(it.sid) ? play.dead.delete(it.sid) : play.dead.add(it.sid); savePlaySoon(); return showPlay(); }
+  if (a === 'pin') { play.pinned.has(it.sid) ? play.pinned.delete(it.sid) : play.pinned.add(it.sid); savePlaySoon(); return showPlay(); }
   const arr = [...modelsOf(it)], m = +btn.dataset.m;
   arr[m] = a === 'wound' ? Math.min(it.max, arr[m] + 1) : Math.max(0, arr[m] - 1);
-  play.wounds.set(it.sid, arr); savePlaySoon(); renderTrack(); renderToc();
+  const was = isDestroyed(it);
+  play.wounds.set(it.sid, arr); savePlaySoon();
+  if (was !== isDestroyed(it)) return showPlay();   // DESTROYED stamp on/off
+  renderTrack(); renderToc();
 };
 let tx = 0, ty = 0;
 $('pStage').addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
