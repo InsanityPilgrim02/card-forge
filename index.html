@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Card Forge">
 <style>
 :root{--cw:63mm;--ch:88mm;--fsName:2.8mm;--fsRules:2mm;--fsWpn:2.05mm;--fsFac:1.9mm;--bw:3mm;--rt:2.8mm;--rn:2.8mm;--rd:2.6mm;
---cCardBg:#ffffff;--cCardBd:#222222;--cNameBg:#ffffff;--cNameFg:#111111;--cNameBd:#222222;--cFacBg:#000000;--cFacFg:#ffffff;
+--cCardBg:#ffffff;--cCardBd:#000000;--cNameBg:#ffffff;--cNameFg:#111111;--cNameBd:#222222;--cFacBg:#000000;--cFacFg:#ffffff;
 --cRuleBg:#ffffff;--cRuleFg:#111111;--cRuleBd:#222222;--cWpnBg:#ffffff;--cWpnFg:#111111;--cWpnBd:#2e2e2e;
 --cStatBg:#ffffff;--cStatLb:#444444;--cStatVl:#111111;--cStatBd:#222222;
 --cRefTopBg:#000000;--cRefTopFg:#ffffff;--cRefBody:#fafafa;--cRefName:#111111;--cRefDesc:#222222;
@@ -94,7 +94,33 @@ textarea{width:100%;min-height:80px;margin-top:6px;padding:8px;background:var(--
 .tool{position:absolute;top:1mm;right:1mm;z-index:5;opacity:0;padding:3px 7px;font-size:10px;background:rgba(0,0,0,.75);color:#fff}
 .card:hover .tool{opacity:1}
 .ed{cursor:pointer}.ed:hover{background:rgba(255,220,80,.45);color:#111}
-body.bordered .card{border:var(--bw) solid #000}
+/* flip side + campaign */
+.shell:not(.flipped)>.back{display:none}
+.shell.flipped>.front{display:none}
+.shell.anim>.card{animation:flipin .3s ease}
+@keyframes flipin{from{transform:perspective(700px) rotateY(85deg);opacity:.3}to{transform:none;opacity:1}}
+.flip{flex:none;width:4.8mm;height:4.8mm;border-radius:50%;padding:0;border:0;background:var(--cNameFg);color:var(--cNameBg);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.flip svg{width:3.2mm;height:3.2mm}
+.back .ov{gap:3mm}
+.sec{display:flex;flex-direction:column;align-items:flex-start;gap:1mm}
+.sec .rules{justify-content:flex-start;width:100%}
+.back .fac{align-self:flex-start}
+.addx{padding:.3mm 2mm;font-size:var(--fsRules);border-radius:3mm;background:transparent;color:var(--cRuleFg);border:.25mm dashed var(--cRuleBd);font-weight:600}
+.rmx{margin-left:1mm;cursor:pointer;opacity:.6}.rmx:hover{opacity:1}
+.flag{flex:none;font-weight:900;font-size:var(--fsName);line-height:1;color:#d9453f;margin-left:-.4mm}
+.flag.off{display:none}
+.xp{margin-top:auto;align-self:flex-start;display:flex;align-items:center;gap:1.4mm;background:var(--cRuleBg);color:var(--cRuleFg);border:.25mm solid var(--cRuleBd);border-radius:3mm;padding:.5mm 1.6mm;font-size:var(--fsRules);font-weight:700}
+.xp button{padding:0 1.8mm;font-size:var(--fsRules);line-height:1.3;border-radius:2mm}
+.xp b{min-width:5mm;text-align:center;cursor:pointer}
+.grab{display:flex;align-items:center;justify-content:center;width:var(--cw);height:14px;cursor:grab;background:var(--panel);border:1px solid var(--line);border-radius:5px;touch-action:none;user-select:none}
+.grab i{display:block;width:44px;height:8px;background:radial-gradient(circle,var(--mute) 1.3px,transparent 1.7px) 0 0/8px 8px}
+.shell.dragging{opacity:.55;outline:2px dashed var(--amber);outline-offset:4px}
+.pwrap .sec.none,.pwrap .addx{display:none}
+#xpick{position:fixed;z-index:60;min-width:170px;max-width:min(300px,90vw);max-height:min(300px,50vh);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+#xpick button{display:block;width:100%;text-align:left;padding:9px 12px;border:0;border-radius:0;background:transparent;color:#e8eaee;font-weight:600}
+#xpick button:hover{background:var(--bench)}
+#xpick .cust{color:var(--amber)}
+body.bordered .card{border:var(--bw) solid var(--cCardBd)}
 
 /* reference cards */
 .ref .body{display:flex;flex-direction:column}
@@ -173,9 +199,11 @@ body.bordered .card{border:var(--bw) solid #000}
 @page{size:A4;margin:8mm}
 @media print{
  .art{background:#fff}
- body{background:#fff}header,.wrap,.ctl,.tool,#play,#settings{display:none!important}
+ body{background:#fff}header,.wrap,.ctl,.tool,#play,#settings,#xpick{display:none!important}
  #grid{display:block;padding:0}
- .shell,.print-only{display:block;float:left;margin:2mm;break-inside:avoid}
+ .shell,.print-only{display:flex;gap:2mm;float:left;margin:2mm;break-inside:avoid}
+ .shell>.card.front,.shell>.card.back:not(.empty){display:flex!important}
+ .back.empty,.sec.none,.flip,.flag,.addx,.rmx,.xp button,.grab{display:none!important}
  .card{box-shadow:none}
  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
@@ -199,16 +227,17 @@ body.bordered .card{border:var(--bw) solid #000}
   <details><summary>Layout &amp; sizes</summary><div>
     <div class="row" id="sizes"></div>
     <div class="row" style="margin-top:8px">
-      <label><input type="checkbox" id="bord"> Black card border</label>
-      <label><input type="checkbox" id="stack"> One special rule per line</label>
+      <label><input type="checkbox" id="bord"> Traditional border</label>
+      <label><input type="checkbox" id="stack"> Vertical special rules</label>
     </div>
   </div></details>
-  <details><summary>Reference cards (paste rules text)</summary><div id="refs">
-    <p class="hint">Format: <code>Name:description</code>, one rule per line. Cards update as you type. Click a card title to rename it. If you rename a rule on a unit card, update its name in the pasted text too so the two still match. In Faction Special Rules and Faction Spells, leave a blank line between factions: each faction gets its own cards and its own renamable title.</p>
+  <details><summary>Reference cards</summary><div id="refs">
+    <p class="hint">Format: <code>Name:description</code>, one rule per line. Cards update as you type. Click a card title to rename it. If you rename a rule on a unit card, update its name in the pasted text too so the two still match. In Faction Special Rules and Faction Spells, leave a blank line between factions: each faction gets its own cards and its own renamable title. Skills, Traits, Injuries and Talents work the same way but aren't split by faction; assign them to a unit from the flip side of its card.</p>
   </div></details>
   <p class="hint" id="info"></p>
 </div>
 <div id="grid"></div>
+<div id="xpick" hidden></div>
 <div id="settings" hidden>
   <div class="sbox" role="dialog" aria-modal="true" aria-label="Settings">
     <div class="shead"><h2>Settings</h2><button id="sClose">✕ Close</button></div>
@@ -228,6 +257,7 @@ body.bordered .card{border:var(--bw) solid #000}
         <ul>
           <li>One card per unit. Combined units are merged into one card and identical units are collapsed.</li>
           <li><b>Click to rename:</b> a unit name, the faction label (renames it for the whole army), a special rule or a weapon. Rule and weapon renames only apply to that faction, and values in brackets stay fixed.</li>
+          <li><b>Reorder:</b> drag the grip bar above a card to move it. The order is saved with the list and is used by Play, print and export.</li>
           <li><b>Play qty</b> under a card is how many copies of that unit appear in Play mode and in print (up to 20).</li>
           <li><b>Images:</b> hover a card and press <b>Image</b> to pick from your library or use the camera (Capture or Cancel on the live preview). Sliders under the card set opacity, position and zoom. Images are saved per exact unit (name, stats and loadout), so two units with the same name keep their own pictures. A unit with no image of its own picks up the first image saved for that name. <b>Remove saved image</b> clears it.</li>
         </ul>
@@ -240,8 +270,17 @@ body.bordered .card{border:var(--bw) solid #000}
           <li>If you rename a rule on a unit card, change it in your pasted text as well so the Play mode popups still match. The pasted text is saved automatically.</li>
         </ul>
 
+        <h3>Campaign: injuries, talents, traits &amp; skills</h3>
+        <ul>
+          <li>Paste your <b>Injuries</b>, <b>Talents</b>, <b>Traits</b> and <b>Skills</b> into their own boxes under Reference cards (<code>Name:description</code>). Each becomes a reference card. Nothing here is imported from Army Forge except a unit's XP.</li>
+          <li>None of this shows on the front of a card. Press the round <b>flip</b> button at the left of the name box to turn it over (press again to turn back). A red <b>!</b> beside the button means the back has something on it.</li>
+          <li>The back lists Injuries, Talents, Traits and Skills, each under its own heading. <b>Heroes</b> get all four; every other unit only gets <b>Talents</b>. Use <b>+ Add</b> to pick from your pasted list, or type your own; <b>×</b> removes one.</li>
+          <li><b>XP</b> sits at the bottom of the back. Use − and + to change it, or click the number to type one. It starts at Army Forge's value.</li>
+          <li>Each back is its own card. It prints and exports next to its unit, and is skipped if it has nothing on it. Flip and XP also work in Play mode, and hovering or tapping an entry shows its description.</li>
+        </ul>
+
         <h3>Layout &amp; sizes</h3>
-        <p>Card size, text sizes and colours for every part of the card, an optional black border (default 3 mm, like a trading card), and a one-rule-per-line option.</p>
+        <p>Card size, text sizes and colours for every part of the card, an optional <b>Traditional border</b> (default 3 mm, like a trading card, drawn in the Border colour), and a <b>Vertical special rules</b> option that stacks the special rules on the front one per line.</p>
 
         <h3>Play mode</h3>
         <ul>
@@ -287,10 +326,10 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const clampInt = (v, lo, hi, d) => Math.max(lo, Math.min(hi, parseInt(v) || d));
 
 const FIELDS = [['cw','Width mm',63,40,100,.5],['ch','Height mm',88,50,140,.5],['fsName','Name text',2.8,1.5,6,.1],
-  ['fsRules','Rules text',2,1.2,5,.1],['fsWpn','Weapon text',2.05,1.2,5,.1],['fsFac','Faction text',1.9,1,5,.1],['bw','Border mm',3,.5,8,.5],
+  ['fsRules','Rules text',2,1.2,5,.1],['fsWpn','Weapon text',2.05,1.2,5,.1],['fsFac','Faction text',1.9,1,5,.1],['bw','Traditional border mm',3,.5,8,.5],
   ['rt','Ref title',2.8,1.5,5,.1],['rn','Ref name',2.8,1.2,5,.05],['rd','Ref text',2.6,1.1,4,.05]];
 const COLORS = [
-  ['cCardBg','Bg','#ffffff'],['cCardBd','Border','#222222'],
+  ['cCardBg','Bg','#ffffff'],['cCardBd','Border','#000000'],
   ['cNameBg','Box','#ffffff'],['cNameFg','Text','#111111'],['cNameBd','Edge','#222222'],
   ['cFacBg','Box','#000000'],['cFacFg','Text','#ffffff'],
   ['cRuleBg','Box','#ffffff'],['cRuleFg','Text','#111111'],['cRuleBd','Edge','#222222'],
@@ -306,14 +345,18 @@ const GROUPS = [
   ['Weapons',['fsWpn'],['cWpnBg','cWpnFg','cWpnBd']],
   ['Quality / Defense / Tough',[],['cStatBg','cStatLb','cStatVl','cStatBd']],
   ['Reference cards',['rt','rn','rd'],['cRefTopBg','cRefTopFg','cRefBody','cRefName','cRefDesc']]];
-const REFS = [['core','Core Special Rules'],['faction','Faction Special Rules'],['spells','Faction Spells']];
+const REFS = [['core','Core Special Rules'],['faction','Faction Special Rules'],['spells','Faction Spells'],
+  ['injuries','Injuries'],['talents','Talents'],['traits','Traits'],['skills','Skills']];
+const SINGLE = new Set(['core', 'skills', 'traits', 'injuries', 'talents']);   // one list each; faction/spells split into factions on blank lines
 const TR = [['o','Opacity',0,100],['x','Horiz',-50,50],['y','Vert',-50,50],['z','Zoom',50,250]];
 
 let army = null, listId = null;
 const bookNames = new Map();                          // armyId -> inferred faction name
 const ruleNames = new Map(), wpnNames = new Map();    // armyId::name -> custom name (per faction)
 const imgs = new Map(), qty = new Map(), names = new Map(), facs = new Map();
-const refText = {core:'', faction:'', spells:''}, refTitles = new Map();   // refTitles key 'kind:blockIndex'
+const extras = new Map(), flipped = new Set(), xps = new Map();   // xps: unit id -> XP set here (overrides the list's value)
+let cardOrder = [];   // unit ids in the order you dragged them   // extras: unit id -> { skills, traits, injuries, talents } added by hand; flipped: cards showing their back
+const refText = Object.fromEntries(REFS.map(([k]) => [k, ''])), refTitles = new Map();   // refTitles key 'kind:blockIndex'
 
 // ---------- storage (IndexedDB) ----------
 // keys: <unit name> image · ref:<kind>:<n> ref-card image · __text · __lists · __list:<id> · __state:<id>
@@ -353,10 +396,11 @@ const listKey = id => `__list:${id}`, stateKey = id => `__state:${id}`;
 const listIndex = async () => (await idb.get('__lists')) || [];
 const loadState = async id => (await idb.get(stateKey(id))) || (await idb.get(listKey(id)))?.state;   // older saves kept state inside the list
 const snapState = () => ({ wounds: [...play.wounds], pinned: [...play.pinned], playI: play.i,
-  names: [...names], facs: [...facs], qty: [...qty], ruleNames: [...ruleNames], wpnNames: [...wpnNames] });
+  names: [...names], facs: [...facs], qty: [...qty], ruleNames: [...ruleNames], wpnNames: [...wpnNames], extras: [...extras], xps: [...xps], order: cardOrder });
 function applyState(st = {}) {
   play.wounds = new Map(st.wounds || []); play.pinned = new Set(st.pinned || []); play.i = st.playI || 0;
-  for (const [m, k] of [[names, 'names'], [facs, 'facs'], [qty, 'qty'], [ruleNames, 'ruleNames'], [wpnNames, 'wpnNames']]) { m.clear(); (st[k] || []).forEach(([a, b]) => m.set(a, b)); }
+  for (const [m, k] of [[names, 'names'], [facs, 'facs'], [qty, 'qty'], [ruleNames, 'ruleNames'], [wpnNames, 'wpnNames'], [extras, 'extras'], [xps, 'xps']]) { m.clear(); (st[k] || []).forEach(([a, b]) => m.set(a, b)); }
+  flipped.clear(); cardOrder = st.order || [];
 }
 async function persistList(full) {
   if (!army || !listId) return;
@@ -474,12 +518,13 @@ function prepare(units) {
     const h = merged.get(u.joinToUnit) || bySid.get(u.joinToUnit);
     merged.set(u.joinToUnit, { ...h, size: (+h.size || 0) + (+u.size || 0), totalCost: costOf(h) + costOf(u),
       loadout: mergeList(h.loadout, u.loadout, wKey), weapons: mergeList(h.weapons, u.weapons, wKey),
-      rules: mergeList(h.rules, u.rules, e => (rating(e) || '').toLowerCase()), joinToUnit: null });
+      rules: mergeList(h.rules, u.rules, e => (rating(e) || '').toLowerCase()), joinToUnit: null,
+      xp: Math.max(Number(h.xp) || 0, Number(u.xp) || 0) });
     gone.add(sidOf(u));
   }
   const seen = new Set();
   return raw.filter(u => !gone.has(sidOf(u))).map(u => merged.get(sidOf(u)) || u).filter(u => {
-    const k = [u.armyId, u.genericName || u.name, u.quality, u.defense, toughOf(u), u.size, costOf(u), rulesOf(u).sort().join('|'), weaponsOf(u).join('|')].join('::');
+    const k = [u.armyId, u.genericName || u.name, u.quality, u.defense, toughOf(u), u.size, costOf(u), rulesOf(u).sort().join('|'), weaponsOf(u).join('|'), u.xp || 0].join('::');
     return seen.has(k) ? false : (seen.add(k), true);
   });
 }
@@ -534,11 +579,11 @@ const IMG_UI = `<button class="tool" data-up>Image</button>
 
 function cardHtml(u) {
   const sid = sidOf(u), aid = armyKey(u), q = u.quality != null ? u.quality + '+' : '–', d = u.defense != null ? u.defense + '+' : '–';
-  return `<article class="card" data-sid="${esc(sid)}" data-aid="${esc(aid)}" data-qty="${qty.get(sid) || 1}" data-n="${u.size || 1}" data-t="${esc(toughOf(u))}" style="${tVars(imgs.get(sid)?.t)}">
+  return `<article class="card front" data-sid="${esc(sid)}" data-aid="${esc(aid)}" data-qty="${qty.get(sid) || 1}" data-n="${u.size || 1}" data-t="${esc(toughOf(u))}" style="${tVars(imgs.get(sid)?.t)}">
     <div class="body">
       ${artHtml(imgs.get(sid))}
       <div class="ov${$('stack').checked ? ' stack' : ''}">
-        <div class="namebox"><div class="nm"><span class="ed" data-nm>${esc(nameOf(u))}</span> [${u.size || 1}]</div><div>${costOf(u)}pts</div></div>
+        <div class="namebox">${FLIP_BTN}<b class="flag${hasCamp(u) ? '' : ' off'}">!</b><div class="nm"><span class="ed" data-nm>${esc(nameOf(u))}</span> [${u.size || 1}]</div><div>${costOf(u)}pts</div></div>
         <div class="fac ed" data-fac="${esc(aid)}">${esc(factionOf(u))}</div>
         <div class="rules">${rulesOf(u).map(r => `<span class="chip ed" data-rule="${esc(r)}">${esc(ruleDisp(r, aid))}</span>`).join('')}</div>
         <div class="weapons">${weaponsOf(u).map(w => `<div class="wpn ed" data-wpn="${esc(w)}">${esc(wpnDisp(w, aid))}</div>`).join('')}</div>
@@ -552,6 +597,101 @@ function ctlHtml(sid, isUnit) {   // unit cards: qty + image tools; reference ca
   return `<div class="ctl"><div>${isUnit ? `<span>Play qty</span><input type="number" min="1" max="20" value="${qty.get(sid) || 1}" data-q>` : '<span>Image</span>'}${im ? '<button data-rm class="rm">Remove saved image</button>' : ''}</div>` +
     (im ? TR.map(([k, l, mn, mx]) => `<div><span>${l}</span><input type="range" min="${mn}" max="${mx}" value="${im.t[k]}" data-tr="${k}"></div>`).join('') : '') + '</div>';
 }
+
+// ---------- campaign: injuries, talents, traits & skills live on the flip side of a unit card ----------
+const SECTIONS = [['injuries', 'Injuries'], ['talents', 'Talents'], ['traits', 'Traits'], ['skills', 'Skills']];
+const sectionsFor = u => isHero(u) ? SECTIONS : SECTIONS.filter(([k]) => k === 'talents');   // only Heroes get Injuries, Traits and Skills
+const kindKey = (kind, name) => kind + ':' + ruleBase(name).toLowerCase();
+const FLIP_BTN = '<button type="button" class="flip" aria-label="Flip card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg></button>';
+const xpOf = u => xps.has(String(sidOf(u))) ? xps.get(String(sidOf(u))) : Number(u.xp) || 0;   // Army Forge's XP until you change it here
+function campOf(u = {}) {   // only what was added by hand; nothing is imported except XP
+  const ex = extras.get(String(sidOf(u))) || {}, out = { xp: xpOf(u) };
+  for (const [k] of SECTIONS) out[k] = [...new Set((ex[k] || []).filter(Boolean))];
+  return out;
+}
+const hasCamp = u => { const c = campOf(u); return c.xp > 0 || sectionsFor(u).some(([k]) => c[k].length); };   // drives the "!" and whether the back prints
+function backHtml(u, forPrint) {
+  const sid = sidOf(u), c = campOf(u), ex = extras.get(String(sid)) || {};
+  const secs = sectionsFor(u).map(([k, label]) => `<div class="sec${c[k].length ? '' : ' none'}"><div class="fac">${label}</div>
+        <div class="rules">${c[k].map(n => `<span class="chip" data-kind="${k}" data-name="${esc(n)}">${esc(n)}${!forPrint && (ex[k] || []).includes(n) ? `<span class="rmx" data-rmx="${k}" data-name="${esc(n)}">×</span>` : ''}</span>`).join('')}</div>
+        ${forPrint ? '' : `<button type="button" class="addx" data-add="${k}">+ Add ${label.replace(/s$/, '')}</button>`}</div>`).join('');
+  return `<article class="card back${hasCamp(u) ? '' : ' empty'}" data-bsid="${esc(sid)}">
+    <div class="body"><div class="ov">
+      <div class="namebox">${FLIP_BTN}<div class="nm">${esc(nameOf(u))} [${u.size || 1}]</div></div>
+      ${secs}
+      <div class="xp">XP ${forPrint ? '' : '<button type="button" data-xp="-1">−</button>'}<b data-xpval="${esc(sid)}"${forPrint ? '' : ' data-xpset'}>${c.xp}</b>${forPrint ? '' : '<button type="button" data-xp="1">+</button>'}</div>
+    </div></div></article>`;
+}
+const unitHtml = u => { const sid = sidOf(u); return `<div class="shell${flipped.has(String(sid)) ? ' flipped' : ''}" data-ushell="${esc(sid)}"><div class="grab"><i></i></div>${cardHtml(u)}${backHtml(u)}${ctlHtml(sid, true)}</div>`; };
+function flipCard(btn) {
+  const shell = btn.closest('.shell'); if (!shell) return;
+  const sid = shell.dataset.ushell, on = shell.classList.toggle('flipped');
+  on ? flipped.add(sid) : flipped.delete(sid);
+  shell.classList.add('anim'); setTimeout(() => shell.classList.remove('anim'), 350);
+}
+function addExtra(sid, kind, name) {
+  const ex = extras.get(sid) || {}; ex[kind] = [...new Set([...(ex[kind] || []), name])]; extras.set(sid, ex); savePlaySoon(); render();
+}
+function removeExtra(el) {
+  const sid = el.closest('.shell')?.dataset.ushell, ex = extras.get(sid); if (!ex) return;
+  ex[el.dataset.rmx] = (ex[el.dataset.rmx] || []).filter(n => n !== el.dataset.name); savePlaySoon(); render();
+}
+// XP: edited in place (grid or Play mode) so nothing else on screen has to be redrawn
+function setXp(sid, v) {
+  v = Math.max(0, Math.min(9999, Math.round(v) || 0)); xps.set(sid, v);
+  const has = hasCamp(unitBySid(sid) || { selectionId: sid });
+  document.querySelectorAll('[data-xpval]').forEach(e => { if (e.dataset.xpval === sid) e.textContent = v; });
+  document.querySelectorAll('.card.back').forEach(c => { if (c.dataset.bsid === sid) c.classList.toggle('empty', !has); });
+  document.querySelectorAll('.card.front').forEach(c => { if (c.dataset.sid === sid) c.querySelector('.flag')?.classList.toggle('off', !has); });
+  savePlaySoon(); if (play.on) showPlay();
+}
+function xpClick(el) {
+  const sid = el.closest('.card.back')?.dataset.bsid; if (!sid) return;
+  const cur = xps.has(sid) ? xps.get(sid) : Number(unitBySid(sid)?.xp) || 0;
+  if (el.dataset.xp) return setXp(sid, cur + Number(el.dataset.xp));
+  const v = prompt('Set XP:', cur); if (v !== null && v.trim() !== '') setXp(sid, Number(v));
+}
+function openPick(btn) {   // choose from the pasted list, or type a name
+  const kind = btn.dataset.add, sid = btn.closest('.shell')?.dataset.ushell, box = $('xpick');
+  const have = new Set(campOf(unitBySid(sid))[kind].map(n => n.toLowerCase()));
+  box._ctx = { kind, sid };
+  box.innerHTML = parseRules(refText[kind]).map(e => e.name).filter(n => !have.has(n.toLowerCase())).map(n => `<button type="button" data-pn="${esc(n)}">${esc(n)}</button>`).join('')
+    + '<button type="button" class="cust" data-pcustom>Type a name…</button>';
+  box.hidden = false;
+  const r = btn.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
+  box.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+  box.style.top = (r.bottom + 4 + h > innerHeight - 8 ? Math.max(8, r.top - h - 4) : r.bottom + 4) + 'px';
+}
+$('xpick').addEventListener('click', e => {
+  const b = e.target.closest('button'), { kind, sid } = $('xpick')._ctx || {}; if (!b || !kind) return;
+  const name = b.hasAttribute('data-pcustom') ? (prompt('Name to add:') || '').trim() : b.dataset.pn;
+  $('xpick').hidden = true; if (name) addExtra(sid, kind, name);
+});
+
+// ---------- drag the grip bar above a unit card to reorder; the order is saved with the list ----------
+let drag = null;
+function dragMove(e) {
+  if (!drag) return;
+  if (e.clientY < 70) scrollBy(0, -14); else if (e.clientY > innerHeight - 70) scrollBy(0, 14);
+  drag.style.pointerEvents = 'none';
+  const under = document.elementFromPoint(e.clientX, e.clientY)?.closest('.shell[data-ushell]');
+  drag.style.pointerEvents = '';
+  if (!under || under === drag) return;
+  const r = under.getBoundingClientRect();
+  under.parentNode.insertBefore(drag, e.clientX > r.left + r.width / 2 ? under.nextSibling : under);
+}
+function dragEnd() {
+  document.removeEventListener('pointermove', dragMove); document.removeEventListener('pointerup', dragEnd); document.removeEventListener('pointercancel', dragEnd);
+  if (!drag) return;
+  drag.classList.remove('dragging'); drag = null;
+  cardOrder = [...document.querySelectorAll('#grid .shell[data-ushell]')].map(sh => sh.dataset.ushell);
+  savePlaySoon(); render();   // redraw so each unit's extra print copies sit next to it again
+}
+$('grid').addEventListener('pointerdown', e => {
+  const g = e.target.closest('.grab'); if (!g) return;
+  e.preventDefault(); drag = g.closest('.shell'); drag.classList.add('dragging');
+  document.addEventListener('pointermove', dragMove); document.addEventListener('pointerup', dragEnd); document.addEventListener('pointercancel', dragEnd);
+});
 
 function parseRules(raw) {
   const t = raw.replace(/\r\n?/g, '\n').trim(), re = /(?:^|\n)[ \t]*([A-Za-z][A-Za-z0-9' /+()\-]{0,50}):/g, hits = [];
@@ -592,7 +732,7 @@ function paginate(entries, title, spells) {
 function refCards() {
   let html = '', n = 0;
   for (const [k, base] of REFS) {
-    const blocks = k === 'core' ? [parseRules(refText.core)] : blocksOf(refText[k]);
+    const blocks = SINGLE.has(k) ? [parseRules(refText[k])] : blocksOf(refText[k]);
     blocks.forEach((entries, bi) => {
       if (!entries.length) return;
       const key = `${k}:${bi}`, sid = 'ref:' + key, title = refTitles.get(key) || (blocks.length > 1 ? `${base} ${bi + 1}` : base);
@@ -615,10 +755,15 @@ function refCards() {
 function render() {
   applyVars();
   let html = '', unique = 0, printed = 0;
-  if (army) for (const u of prepare(army.units || [])) {
+  let units = army ? prepare(army.units || []) : [];
+  if (cardOrder.length) {   // your dragged order; anything new stays in list order after it
+    const pos = new Map(cardOrder.map((id, i) => [id, i]));
+    units = units.map((u, i) => [u, pos.has(String(sidOf(u))) ? pos.get(String(sidOf(u))) : 1e6 + i]).sort((x, y) => x[1] - y[1]).map(x => x[0]);
+  }
+  for (const u of units) {
     const q = qty.get(sidOf(u)) || 1; unique++; printed += q;
-    html += `<div class="shell">${cardHtml(u)}${ctlHtml(sidOf(u), true)}</div>`;
-    for (let i = 1; i < q; i++) html += `<div class="print-only">${cardHtml(u)}</div>`;
+    html += unitHtml(u);
+    for (let i = 1; i < q; i++) html += `<div class="print-only">${cardHtml(u)}${backHtml(u, true)}</div>`;
   }
   const r = refCards();
   $('grid').innerHTML = html + r.html;
@@ -673,6 +818,10 @@ async function openCamera(card) {
 const ask = (msg, cur) => { const v = prompt(msg, cur); return v && v.trim() && v.trim() !== cur ? v.trim() : null; };
 $('grid').addEventListener('click', e => {
   const t = e.target;
+  const fb = t.closest('.flip'); if (fb) return flipCard(fb);
+  const ab = t.closest('[data-add]'); if (ab) { e.stopPropagation(); return openPick(ab); }
+  const rx = t.closest('.rmx'); if (rx) return removeExtra(rx);
+  const xb = t.closest('[data-xp],[data-xpset]'); if (xb) return xpClick(xb);
   if (t.dataset.up !== undefined) {
     e.stopPropagation();
     const menu = t.parentElement.querySelector('.imgmenu');
@@ -723,7 +872,7 @@ let timer;
 document.querySelectorAll('[data-ref]').forEach(ta => ta.addEventListener('input', () => {
   refText[ta.dataset.ref] = ta.value; clearTimeout(timer); timer = setTimeout(() => { saveText(); render(); }, 350);
 }));
-// Layout & sizes (sizes, colours, border, one-rule-per-line) are remembered on this device
+// Layout & sizes (sizes, colours, traditional border, vertical rules) are remembered on this device
 const layoutIds = [...FIELDS, ...COLORS].map(f => f[0]);
 let _layT;
 const saveLayout = () => { clearTimeout(_layT); _layT = setTimeout(() => idb.set('__layout',
@@ -782,6 +931,7 @@ $('urlDrop').addEventListener('click', async e => {
 });
 document.addEventListener('click', e => {
   if (!e.target.closest('.urlwrap')) hideDrop();
+  if (!e.target.closest('#xpick')) $('xpick').hidden = true;
   if (!e.target.closest('.imgmenu') && e.target.dataset.up === undefined) document.querySelectorAll('.imgmenu').forEach(m => { m.hidden = true; });
 });
 $('print').onclick = () => print();
@@ -793,7 +943,7 @@ const closeSettings = () => { $('settings').hidden = true; };
 $('settingsBtn').onclick = () => { showTab('readme'); $('settings').hidden = false; };
 $('sClose').onclick = closeSettings;
 $('settings').addEventListener('click', e => { if (e.target === $('settings')) closeSettings(); else if (e.target.dataset.tab) showTab(e.target.dataset.tab); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('settings').hidden) closeSettings(); });
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; $('xpick').hidden = true; if (!$('settings').hidden) closeSettings(); });
 $('wipe').onclick = async () => {
   if (!confirm('Delete ALL Card Forge data on this device?\n\nThis removes saved lists, play state, images and pasted rules text, and cannot be undone.')) return;
   clearTimeout(_saveT); clearTimeout(timer); stopCamera(); army = null; listId = null;
@@ -801,7 +951,7 @@ $('wipe').onclick = async () => {
 };
 
 // ---------- play mode: one big card, swipe/arrows/contents, per-model toughness, pin, dice, spells, rule popups ----------
-const play = { on: false, i: 0, list: [], wounds: new Map(), pinned: new Set(), lookup: new Map(), refOpen: false, back: null, dice: null };
+const play = { on: false, i: 0, list: [], wounds: new Map(), pinned: new Set(), flipped: new Set(), lookup: new Map(), refOpen: false, back: null, dice: null };
 const modelsOf = it => play.wounds.get(it.sid) || Array(it.n).fill(0);   // wounds lost per model
 const aliveOf = it => modelsOf(it).filter(l => l < it.max).length;
 const isDestroyed = it => it.max > 0 && aliveOf(it) === 0;   // every model out of wounds (units without Tough aren't tracked)
@@ -811,16 +961,17 @@ const unitIdx = () => { const b = play.list[play.back]; return b && !b.ref ? pla
 function buildLookup() {
   const m = new Map(), add = e => { const k = ruleBase(e.name).toLowerCase(); if (k && !m.has(k)) m.set(k, e); };
   blocksOf(refText.faction).flat().forEach(add); blocksOf(refText.spells).flat().forEach(add); parseRules(refText.core).forEach(add);
+  for (const [k] of SECTIONS) parseRules(refText[k]).forEach(e => { const key = kindKey(k, e.name); if (!m.has(key)) m.set(key, e); });
   return m;
 }
 function openPlay() {
   stopCamera();
-  play.list = [...document.querySelectorAll('#grid .shell .card')].flatMap(c => {
+  play.list = [...document.querySelectorAll('#grid .shell .card:not(.back)')].flatMap(c => {
     const ref = c.classList.contains('ref'), q = ref ? 1 : Math.max(1, Number(c.dataset.qty) || 1);   // Play qty: each copy is its own tracked card
     const caster = !ref && [...c.querySelectorAll('.chip')].some(ch => ruleBase(ch.dataset.rule || ch.textContent).toLowerCase() === 'caster');
     const label = (c.querySelector('.nm .ed') || c.querySelector('.top .ed'))?.textContent || 'Card';
     return Array.from({ length: q }, (_, i) => ({ el: c, ref, caster, rk: c.dataset.rk || '', title: c.querySelector('[data-cur]')?.dataset.cur || '',
-      aid: c.dataset.aid || '', fac: c.querySelector('.fac')?.textContent || '', baseSid: c.dataset.sid || '', copy: i + 1, copies: q,
+      back: c.closest('.shell')?.querySelector(':scope > .card.back') || null, aid: c.dataset.aid || '', fac: c.querySelector('.fac')?.textContent || '', baseSid: c.dataset.sid || '', copy: i + 1, copies: q,
       sid: ref ? null : `${c.dataset.sid}#${i}`, n: ref ? 0 : Number(c.dataset.n) || 1, max: ref ? 0 : Number(c.dataset.t) || 0,   // max 0 = no Tough, nothing to track
       name: q > 1 ? `${label} (${i + 1}/${q})` : label }));
   });
@@ -837,7 +988,10 @@ function closePlay() {
 // make rules with a known description tappable/hoverable (unit rule chips and weapon special rules)
 function linkRules(root) {
   const L = play.lookup; if (!L.size) return;
-  root.querySelectorAll('.chip').forEach(ch => {
+  root.querySelectorAll('[data-kind]').forEach(el => {   // traits / skills / injuries / talents
+    const k = kindKey(el.dataset.kind, el.dataset.name); if (L.has(k)) { el.dataset.tip = k; el.classList.add('rl'); }
+  });
+  root.querySelectorAll('.chip:not([data-kind])').forEach(ch => {
     const k = [ch.textContent, ch.dataset.rule || ''].map(x => ruleBase(x).toLowerCase()).find(x => L.has(x));
     if (!k) return;
     ch.dataset.tip = k; ch.classList.add('rl');
@@ -873,8 +1027,8 @@ function showPlay() {
   const view = play.list[play.i], ui = unitIdx(), unit = play.list[ui], wrap = document.createElement('div');
   if (play.dice && !unit.ref) { wrap.className = 'pwrap'; wrap.innerHTML = diceCardHtml(); }
   else {
-    const clone = view.el.cloneNode(true);
-    clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,input').forEach(e => e.remove());
+    const clone = (play.flipped.has(view.baseSid) && view.back ? view.back : view.el).cloneNode(true);
+    clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,.addx,.rmx,input').forEach(e => e.remove());
     clone.querySelectorAll('.ed').forEach(e => e.classList.remove('ed'));
     linkRules(clone);
     wrap.className = 'pwrap' + (isDestroyed(view) ? ' dead' : play.pinned.has(view.sid) ? ' pinned' : ''); wrap.appendChild(clone);
@@ -984,6 +1138,12 @@ function doRoll() {
   showPlay();
 }
 $('pStage').addEventListener('click', e => {
+  const xb = e.target.closest('[data-xp],[data-xpset]'); if (xb) return xpClick(xb);
+  if (e.target.closest('.flip')) {   // turn the unit card over (its back lists skills, traits, injuries & talents)
+    const v = play.list[play.i];
+    if (v?.back) { play.flipped.has(v.baseSid) ? play.flipped.delete(v.baseSid) : play.flipped.add(v.baseSid); showPlay(); }
+    return;
+  }
   if (e.target.closest('[data-a=roll]')) { e.preventDefault(); e.stopPropagation(); return doRoll(); }
   if (ptype === 'mouse') return;
   const el = e.target.closest('[data-tip]'); el && $('pTip')._el !== el ? showTip(el) : hideTip();
@@ -1060,9 +1220,9 @@ function makeZip(files) {
   end.setUint32(12, cen.reduce((a, x) => a + x.byteLength, 0), true); end.setUint32(16, off, true);
   return new Blob([...parts, ...cen, end], { type: 'application/zip' });
 }
-async function cardPng(card, css, vars) {
-  const W = card.offsetWidth, H = card.offsetHeight, S = 300 / 96, clone = card.cloneNode(true);
-  clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,input').forEach(e => e.remove());
+async function cardPng(card, css, vars, size = card) {   // size: an on-screen card to measure (a hidden back has no size of its own)
+  const W = size.offsetWidth, H = size.offsetHeight, S = 300 / 96, clone = card.cloneNode(true);
+  clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,.flip,.flag,.addx,.rmx,.xp button,input').forEach(e => e.remove());
   const wrap = document.createElement('div');
   wrap.className = 'xw' + (document.body.classList.contains('bordered') ? ' bordered' : '');
   wrap.setAttribute('style', vars); wrap.appendChild(clone);
@@ -1074,16 +1234,17 @@ async function cardPng(card, css, vars) {
   return new Uint8Array(await (await new Promise(r => cv.toBlob(r, 'image/png'))).arrayBuffer());
 }
 $('export').onclick = async () => {
-  const cards = [...document.querySelectorAll('#grid .shell .card')]; if (!cards.length) return;
+  const cards = [...document.querySelectorAll('#grid .shell .card')].filter(c => !c.classList.contains('empty')); if (!cards.length) return;
   const css = document.querySelector('style').textContent.replace(/body\.bordered/g, '.xw.bordered') +
-    '.xw{font:14px/1.4 "Trebuchet MS","Segoe UI",system-ui,sans-serif}.xw .art{background:#fff}.xw .card{box-shadow:none}';
+    '.xw{font:14px/1.4 "Trebuchet MS","Segoe UI",system-ui,sans-serif}.xw .art{background:#fff}.xw .card{box-shadow:none}.xw .sec.none{display:none}';
   const root = document.documentElement.style, vars = [...FIELDS.map(([id]) => id), ...COLORS.map(([id]) => id)].map(id => `--${id}:${root.getPropertyValue('--' + id)}`).join(';');
   $('export').disabled = true; const files = [];
   try {
     for (const [i, c] of cards.entries()) {
       status(`Exporting card ${i + 1} of ${cards.length}…`);
-      const label = (c.querySelector('.nm .ed') || c.querySelector('.top .ed'))?.textContent || 'card';
-      files.push({ name: `${String(i + 1).padStart(2, '0')}-${label.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'card'}.png`, data: await cardPng(c, css, vars) });
+      const back = c.classList.contains('back'), label = (c.querySelector('.nm .ed') || c.querySelector('.nm') || c.querySelector('.top .ed'))?.textContent || 'card';
+      files.push({ name: `${String(i + 1).padStart(2, '0')}-${label.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'card'}${back ? '-back' : ''}.png`,
+        data: await cardPng(c, css, vars, back ? c.parentElement.querySelector('.card.front') : c) });
     }
     const a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files));
     a.download = (army?.name || 'cards').replace(/[^\w]+/g, '-') + '-cards.zip'; a.click();
