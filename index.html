@@ -723,8 +723,19 @@ let timer;
 document.querySelectorAll('[data-ref]').forEach(ta => ta.addEventListener('input', () => {
   refText[ta.dataset.ref] = ta.value; clearTimeout(timer); timer = setTimeout(() => { saveText(); render(); }, 350);
 }));
-['sizes', 'stack', 'bord'].forEach(id => $(id).addEventListener('change', render));
-$('sizes').addEventListener('input', e => { if (e.target?.type === 'color') render(); });
+// Layout & sizes (sizes, colours, border, one-rule-per-line) are remembered on this device
+const layoutIds = [...FIELDS, ...COLORS].map(f => f[0]);
+let _layT;
+const saveLayout = () => { clearTimeout(_layT); _layT = setTimeout(() => idb.set('__layout',
+  { ...Object.fromEntries(layoutIds.map(id => [id, $(id).value])), bord: $('bord').checked, stack: $('stack').checked }), 300); };
+function applyLayout(lay) {
+  if (!lay) return;
+  for (const id of layoutIds) if (lay[id] != null && $(id)) $(id).value = lay[id];
+  $('bord').checked = !!lay.bord; $('stack').checked = !!lay.stack;
+}
+const layoutChanged = () => { saveLayout(); render(); };
+['sizes', 'stack', 'bord'].forEach(id => $(id).addEventListener('change', layoutChanged));
+$('sizes').addEventListener('input', e => { if (e.target?.type === 'color') layoutChanged(); });
 
 // ---------- import / saved-list dropdown ----------
 async function load() {
@@ -1084,6 +1095,7 @@ $('export').onclick = async () => {
 
 // ---------- startup ----------
 (async () => {
+  applyLayout(await idb.get('__layout'));
   const rec = await idb.get('__text');
   if (rec) {
     for (const [k] of REFS) refText[k] = rec[k] || '';
