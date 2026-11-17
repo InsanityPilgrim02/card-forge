@@ -75,7 +75,7 @@ textarea{width:100%;min-height:80px;margin-top:6px;padding:8px;background:var(--
 .ctl .rm{margin-left:auto;white-space:nowrap;padding:3px 6px;font-size:10px}
 
 /* ---- the card ---- */
-.card{width:var(--cw);height:var(--ch);border:.35mm solid var(--cCardBd);border-radius:3mm;overflow:hidden;position:relative;background:var(--cCardBg);color:#111;display:flex;flex-direction:column;flex:none;break-inside:avoid;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+.card{width:var(--cw);height:var(--ch);border:.35mm solid var(--cCardBd);border-radius:3mm;overflow:hidden;position:relative;background:var(--cCardBg);background-clip:padding-box;isolation:isolate;color:#111;display:flex;flex-direction:column;flex:none;break-inside:avoid;box-shadow:0 3px 10px rgba(0,0,0,.35)}
 .namebox{display:flex;justify-content:space-between;align-items:center;gap:1.5mm;background:var(--cNameBg);border:.25mm solid var(--cNameBd);border-radius:3mm;padding:.9mm 2.2mm;font-weight:700;font-size:var(--fsName);color:var(--cNameFg);line-height:1.2}
 .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .body{position:relative;flex:1;min-height:0;overflow:hidden}
@@ -120,7 +120,10 @@ textarea{width:100%;min-height:80px;margin-top:6px;padding:8px;background:var(--
 #xpick button{display:block;width:100%;text-align:left;padding:9px 12px;border:0;border-radius:0;background:transparent;color:#e8eaee;font-weight:600}
 #xpick button:hover{background:var(--bench)}
 #xpick .cust{color:var(--amber)}
-body.bordered .card{border:var(--bw) solid var(--cCardBd)}
+/* traditional border: drawn as an overlay that overlaps the content by .3mm. A real border abuts the content, and two
+   anti-aliased edges meeting at a fractional pixel leave a faint light seam (it also showed up in PNG exports) */
+body.bordered .card{border:0;padding:max(0mm,calc(var(--bw) - .3mm));background-clip:content-box}   /* keeps the fill from reaching the rounded outer edge (white fringe at the corners) */
+body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw) solid var(--cCardBd);border-radius:inherit;pointer-events:none;z-index:60}
 
 /* reference cards */
 .ref .body{display:flex;flex-direction:column}
@@ -203,6 +206,9 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
 #expMenu button:hover{background:var(--bench)}
 /* on screen only: show a checkerboard where the card background is switched off */
 @media screen{body.nocardbg .card:not(.dice-stage){background:repeating-conic-gradient(#d4d4d4 0 25%,#e6e6e6 0 50%) 0 0/4mm 4mm}}
+#psheet{display:none}
+.gback .gbhint{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2mm;text-align:center;padding:6mm;color:#667;font-weight:700;font-size:3.2mm;pointer-events:none}
+.gback .gbhint small{font-weight:400;font-size:2.3mm}
 @page{size:A4;margin:8mm}
 @media print{
  body{background:#fff}header,.wrap,.ctl,.tool,#play,#settings,#xpick,#expMenu{display:none!important}
@@ -214,6 +220,13 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
  .shell>.card.front,.shell>.card.back:not(.empty),.print-only>.card{display:flex!important}
  .back.empty,.sec.none,.flip,.flag,.addx,.rmx,.xp button,.grab{display:none!important}
  .card{box-shadow:none}
+ .gbshell,.gbhint{display:none!important}
+ /* card backs on: the app builds explicit pages (fronts, then mirrored backs) so both sides line up when duplex printing */
+ body.backs #grid{display:none!important}
+ body.backs #psheet{display:block}
+ .ppage{break-after:page}.ppage:last-child{break-after:auto}
+ .pgrid{display:grid;gap:2mm;justify-content:center}
+ .pcell .card{display:flex!important}
  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
@@ -247,6 +260,7 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
       <label><input type="checkbox" id="stack"> Vertical special rules</label>
       <label><input type="checkbox" id="noCardBg"> No card background (transparent)</label>
       <label><input type="checkbox" id="noRefBody"> No reference body background</label>
+      <label><input type="checkbox" id="cardBacks"> Enable card backs</label>
     </div>
   </div></details>
   <details><summary>Reference cards</summary><div id="refs">
@@ -255,6 +269,7 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
   <p class="hint" id="info"></p>
 </div>
 <div id="grid"></div>
+<div id="psheet"></div>
 <div id="xpick" hidden></div>
 <div id="settings" hidden>
   <div class="sbox" role="dialog" aria-modal="true" aria-label="Settings">
@@ -316,6 +331,7 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
         <p>The <b>Export</b> button opens a menu:</p>
         <ul>
           <li><b>Export to Printer</b> lays the cards out on A4, one copy per Play qty. Fronts and backs are placed as separate cards with the same gap everywhere, so you can cut along straight lines.</li>
+          <li><b>Enable card backs</b> (Layout &amp; sizes) adds one extra card at the end of the grid where you set a shared back image. When printing, every card gets that image on its reverse unless it has campaign info, in which case its campaign back is used. Backs are printed on their own pages, mirrored so they line up behind the fronts: turn on <b>two-sided / duplex printing, flip on long edge</b> in the print dialog. The page can't see your printer's duplex setting, so with duplex off the backs print as separate sheets.</li>
           <li><b>Export to PNGs</b> saves every card as a 300 dpi image in a single zip.</li>
           <li><b>Export to JSON</b> saves the list, play state, images, pasted rules text and layout to one file. With the link box empty, <b>Import</b> asks for that file, so you can move a list to another device.</li>
         </ul>
@@ -482,6 +498,7 @@ function applyVars() {
   for (const [id, , def, mn, mx] of FIELDS) { const v = Number($(id).value); root.setProperty('--' + id, Math.max(mn, Math.min(mx, Number.isFinite(v) ? v : def)) + 'mm'); }
   for (const [id, , def] of COLORS) root.setProperty('--' + id, $(id)?.value || def);
   document.body.classList.toggle('nocardbg', $('noCardBg').checked);
+  document.body.classList.toggle('backs', $('cardBacks').checked);
   if ($('noCardBg').checked) root.setProperty('--cCardBg', 'transparent');
   root.setProperty('--rbPct', $('noRefBody').checked ? '0%' : '88%');
 }
@@ -778,6 +795,8 @@ function refCards() {
   return { html, n };
 }
 
+const GB = 'ref:cardback';   // the one shared back image; saved, exported and removed like a reference-card image
+const gbackHtml = () => { const im = imgs.get(GB); return `<article class="card gback" data-sid="${GB}" style="${tVars(im?.t)}"><div class="body">${artHtml(im)}${im ? '' : '<div class="gbhint">Card back<small>Add an image. It prints on the reverse of every card that has no campaign info.</small></div>'}${IMG_UI}</div></article>`; };
 function render() {
   applyVars();
   let html = '', unique = 0, printed = 0;
@@ -792,7 +811,7 @@ function render() {
     for (let i = 1; i < q; i++) html += `<div class="print-only">${cardHtml(u)}${backHtml(u, true)}</div>`;
   }
   const r = refCards();
-  $('grid').innerHTML = html + r.html;
+  $('grid').innerHTML = html + r.html + ($('cardBacks').checked ? `<div class="shell gbshell">${gbackHtml()}${ctlHtml(GB, false)}</div>` : '');
   $('export').disabled = $('playBtn').disabled = !(printed + r.n);
   $('info').textContent = [unique && `${unique} unit cards`, printed > unique && `${printed} printed`, r.n && `${r.n} reference cards`].filter(Boolean).join(' · ');
   attachCamera();
@@ -902,15 +921,15 @@ document.querySelectorAll('[data-ref]').forEach(ta => ta.addEventListener('input
 const layoutIds = [...FIELDS, ...COLORS].map(f => f[0]);
 let _layT;
 const layoutData = () => ({ ...Object.fromEntries(layoutIds.map(id => [id, $(id).value])), bord: $('bord').checked, stack: $('stack').checked,
-  noCardBg: $('noCardBg').checked, noRefBody: $('noRefBody').checked });
+  noCardBg: $('noCardBg').checked, noRefBody: $('noRefBody').checked, cardBacks: $('cardBacks').checked });
 const saveLayout = () => { clearTimeout(_layT); _layT = setTimeout(() => idb.set('__layout', layoutData()), 300); };
 function applyLayout(lay) {
   if (!lay) return;
   for (const id of layoutIds) if (lay[id] != null && $(id)) $(id).value = lay[id];
-  $('bord').checked = !!lay.bord; $('stack').checked = !!lay.stack; $('noCardBg').checked = !!lay.noCardBg; $('noRefBody').checked = !!lay.noRefBody;
+  $('bord').checked = !!lay.bord; $('stack').checked = !!lay.stack; $('noCardBg').checked = !!lay.noCardBg; $('noRefBody').checked = !!lay.noRefBody; $('cardBacks').checked = !!lay.cardBacks;
 }
 const layoutChanged = () => { saveLayout(); render(); };
-['sizes', 'stack', 'bord', 'noCardBg', 'noRefBody'].forEach(id => $(id).addEventListener('change', layoutChanged));
+['sizes', 'stack', 'bord', 'noCardBg', 'noRefBody', 'cardBacks'].forEach(id => $(id).addEventListener('change', layoutChanged));
 $('sizes').addEventListener('input', e => { if (e.target?.type === 'color') layoutChanged(); });
 
 // ---------- import / saved-list dropdown ----------
@@ -994,7 +1013,7 @@ function buildLookup() {
 }
 function openPlay() {
   stopCamera();
-  play.list = [...document.querySelectorAll('#grid .shell .card:not(.back)')].flatMap(c => {
+  play.list = [...document.querySelectorAll('#grid .shell .card:not(.back):not(.gback)')].flatMap(c => {
     const ref = c.classList.contains('ref'), q = ref ? 1 : Math.max(1, Number(c.dataset.qty) || 1);   // Play qty: each copy is its own tracked card
     const caster = !ref && [...c.querySelectorAll('.chip')].some(ch => ruleBase(ch.dataset.rule || ch.textContent).toLowerCase() === 'caster');
     const label = (c.querySelector('.nm .ed') || c.querySelector('.top .ed'))?.textContent || 'Card';
@@ -1264,13 +1283,13 @@ async function cardPng(card, css, vars, size = card) {   // size: an on-screen c
 async function exportPngs() {
   const cards = [...document.querySelectorAll('#grid .shell .card')].filter(c => !c.classList.contains('empty')); if (!cards.length) return;
   const css = document.querySelector('style').textContent.replace(/body\.bordered/g, '.xw.bordered') +
-    '.xw{font:14px/1.4 "Trebuchet MS","Segoe UI",system-ui,sans-serif}.xw .card{box-shadow:none}.xw .sec.none{display:none}';
+    '.xw{font:14px/1.4 "Trebuchet MS","Segoe UI",system-ui,sans-serif}.xw .card{box-shadow:none}.xw .sec.none{display:none}.xw .gbhint{display:none}';
   const root = document.documentElement.style, vars = [...FIELDS.map(([id]) => id), ...COLORS.map(([id]) => id)].map(id => `--${id}:${root.getPropertyValue('--' + id)}`).join(';') + ';--rbPct:' + (root.getPropertyValue('--rbPct') || '88%');
   $('export').disabled = true; const files = [];
   try {
     for (const [i, c] of cards.entries()) {
       status(`Exporting card ${i + 1} of ${cards.length}…`);
-      const back = c.classList.contains('back'), label = (c.querySelector('.nm .ed') || c.querySelector('.nm') || c.querySelector('.top .ed'))?.textContent || 'card';
+      const back = c.classList.contains('back'), label = c.classList.contains('gback') ? 'card back' : (c.querySelector('.nm .ed') || c.querySelector('.nm') || c.querySelector('.top .ed'))?.textContent || 'card';
       files.push({ name: `${String(i + 1).padStart(2, '0')}-${label.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'card'}${back ? '-back' : ''}.png`,
         data: await cardPng(c, css, vars, back ? c.parentElement.querySelector('.card.front') : c) });
     }
@@ -1315,11 +1334,33 @@ async function importJson(file) {
   } catch (err) { status(err instanceof SyntaxError ? 'That file isn’t valid JSON.' : err.message, 'err'); }
 }
 $('jsonFile').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await importJson(f); });
+// With card backs on, print explicit pages: a page of fronts, then a page of backs mirrored left-to-right (long-edge duplex),
+// so every back lands behind its own front. Cards with campaign info use their own back; the rest get the shared back image.
+function buildPrintSheets() {
+  const out = $('psheet'); out.innerHTML = '';
+  if (!$('cardBacks').checked) return;
+  const cs = getComputedStyle(document.documentElement), w = parseFloat(cs.getPropertyValue('--cw')) || 63, h = parseFloat(cs.getPropertyValue('--ch')) || 88, G = 2;
+  const cols = Math.max(1, Math.floor((194 + G + .01) / (w + G))), rows = Math.max(1, Math.floor((281 + G + .01) / (h + G))), per = cols * rows;   // A4 minus 8 mm page margins
+  const E = [...document.querySelectorAll('#grid > .shell, #grid > .print-only')].filter(c => !c.querySelector('.gback'))
+    .map(c => ({ front: c.querySelector('.card.front, .card.ref'), back: c.querySelector('.card.back:not(.empty)') })).filter(e => e.front);
+  const generic = imgs.get(GB) ? gbackHtml().replace(/<div class="gbhint">.*?<\/div>/, '') : '';
+  const cell = (html, i, col) => html ? `<div class="pcell" style="grid-row:${Math.floor(i / cols) + 1};grid-column:${col + 1}">${html}</div>` : '';
+  const page = cells => `<section class="ppage"><div class="pgrid" style="grid-template-columns:repeat(${cols},var(--cw));grid-auto-rows:var(--ch)">${cells.join('')}</div></section>`;
+  let html = '';
+  for (let i = 0; i < E.length; i += per) {
+    const chunk = E.slice(i, i + per), backs = chunk.map(e => e.back ? e.back.outerHTML : generic);
+    html += page(chunk.map((e, k) => cell(e.front.outerHTML, k, k % cols)));
+    if (backs.some(Boolean)) html += page(backs.map((b, k) => cell(b, k, cols - 1 - (k % cols))));
+  }
+  out.innerHTML = html;
+}
+window.addEventListener('beforeprint', buildPrintSheets);
+window.addEventListener('afterprint', () => { $('psheet').innerHTML = ''; });
 $('export').onclick = e => { e.stopPropagation(); $('expMenu').hidden = !$('expMenu').hidden; };
 $('expMenu').addEventListener('click', e => {
   const b = e.target.closest('[data-exp]'); if (!b) return;
   $('expMenu').hidden = true;
-  if (b.dataset.exp === 'png') exportPngs(); else if (b.dataset.exp === 'print') print(); else exportJson();
+  if (b.dataset.exp === 'png') exportPngs(); else if (b.dataset.exp === 'print') { buildPrintSheets(); print(); } else exportJson();
 });
 
 // ---------- startup ----------
