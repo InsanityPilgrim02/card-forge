@@ -79,7 +79,7 @@ textarea{width:100%;min-height:80px;margin-top:6px;padding:8px;background:var(--
 .namebox{display:flex;justify-content:space-between;align-items:center;gap:1.5mm;background:var(--cNameBg);border:.25mm solid var(--cNameBd);border-radius:3mm;padding:.9mm 2.2mm;font-weight:700;font-size:var(--fsName);color:var(--cNameFg);line-height:1.2}
 .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .body{position:relative;flex:1;min-height:0;overflow:hidden}
-.art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:repeating-conic-gradient(#d4d4d4 0 25%,#e6e6e6 0 50%) 0 0/4mm 4mm;opacity:var(--o,1);transform:translate(var(--x,0%),var(--y,0%)) scale(var(--z,1))}
+.art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:var(--o,1);transform:translate(var(--x,0%),var(--y,0%)) scale(var(--z,1))}
 .ov{position:relative;height:100%;display:flex;flex-direction:column;gap:1.2mm;padding:1.5mm 1.8mm 1.4mm}
 .fac{align-self:center;background:var(--cFacBg);color:var(--cFacFg);font-size:var(--fsFac);font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.7mm 2.4mm;border-radius:3mm;max-width:95%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rules{display:flex;flex-wrap:wrap;gap:1mm}
@@ -125,7 +125,7 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
 /* reference cards */
 .ref .body{display:flex;flex-direction:column}
 .ref .top{display:flex;flex:none;justify-content:center;align-items:center;gap:1.5mm;min-height:7.5mm;padding:1.6mm 2.2mm;width:100%;background:var(--cRefTopBg);color:var(--cRefTopFg);font-size:var(--rt);line-height:1.2;font-weight:700;position:relative;z-index:2}
-.rb{flex:1;min-height:0;overflow:hidden;padding:.8mm 1.3mm 1mm;display:flex;flex-direction:column;gap:.28mm;background:color-mix(in srgb,var(--cRefBody) 88%,transparent);position:relative;z-index:2}
+.rb{flex:1;min-height:0;overflow:hidden;padding:.8mm 1.3mm 1mm;display:flex;flex-direction:column;gap:.28mm;background:color-mix(in srgb,var(--cRefBody) var(--rbPct,88%),transparent);position:relative;z-index:2}
 .re{flex:none;border-bottom:.1mm solid #e4e4e4;padding-bottom:.2mm}.re:last-child{border:0}
 .re b{display:block;font-size:var(--rn);font-weight:800;line-height:1.08;color:var(--cRefName)}
 .re p{margin:.05mm 0 0;font-size:var(--rd);line-height:1.12;color:var(--cRefDesc)}
@@ -196,13 +196,22 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
 .sbody p,.sbody ul{margin:4px 0;color:#d4d8de}
 .sbody ul{padding-left:20px}
 .sbody code{background:var(--ink);padding:1px 5px;border-radius:3px}
+/* export menu */
+.expwrap{position:relative}
+#expMenu{position:absolute;left:0;top:100%;z-index:30;margin-top:4px;min-width:190px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.45);overflow:hidden}
+#expMenu button{display:block;width:100%;text-align:left;padding:10px 12px;border:0;border-radius:0;background:transparent;color:#e8eaee;font-weight:600;white-space:nowrap}
+#expMenu button:hover{background:var(--bench)}
+/* on screen only: show a checkerboard where the card background is switched off */
+@media screen{body.nocardbg .card:not(.dice-stage){background:repeating-conic-gradient(#d4d4d4 0 25%,#e6e6e6 0 50%) 0 0/4mm 4mm}}
 @page{size:A4;margin:8mm}
 @media print{
- .art{background:#fff}
- body{background:#fff}header,.wrap,.ctl,.tool,#play,#settings,#xpick{display:none!important}
- #grid{display:block;padding:0}
- .shell,.print-only{display:flex;gap:2mm;float:left;margin:2mm;break-inside:avoid}
- .shell>.card.front,.shell>.card.back:not(.empty){display:flex!important}
+ body{background:#fff}header,.wrap,.ctl,.tool,#play,#settings,#xpick,#expMenu{display:none!important}
+ #grid{display:block;padding:0;margin-right:-2mm}   /* cancels the last card's right gap so 3 cards fit across A4 */
+ #grid::after{content:"";display:block;clear:both}
+ /* the wrappers vanish; each card flows on its own with the same gap on every side, so rows and columns line up for cutting */
+ .shell,.print-only{display:contents}
+ #grid .card{float:left;margin:0 2mm 2mm 0;break-inside:avoid}
+ .shell>.card.front,.shell>.card.back:not(.empty),.print-only>.card{display:flex!important}
  .back.empty,.sec.none,.flip,.flag,.addx,.rmx,.xp button,.grab{display:none!important}
  .card{box-shadow:none}
  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -216,10 +225,17 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
     <input type="text" id="url" placeholder="Army Forge share link…" autocomplete="off">
     <div id="urlDrop" hidden></div>
   </div>
-  <button id="load">Import</button>
+  <button id="load" title="Import the share link, or a JSON file if the box is empty">Import</button>
+  <input type="file" id="jsonFile" accept=".json,application/json" hidden>
   <button id="playBtn" disabled>▶ Play</button>
-  <button id="export" disabled>Export PNGs</button>
-  <button id="print" disabled>Print</button>
+  <div class="expwrap">
+    <button id="export" disabled>Export ▾</button>
+    <div id="expMenu" hidden>
+      <button type="button" data-exp="png">Export to PNGs</button>
+      <button type="button" data-exp="print">Export to Printer</button>
+      <button type="button" data-exp="json">Export to JSON</button>
+    </div>
+  </div>
   <button id="settingsBtn">⚙ Settings</button>
 </header>
 <div class="wrap">
@@ -229,6 +245,8 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
     <div class="row" style="margin-top:8px">
       <label><input type="checkbox" id="bord"> Traditional border</label>
       <label><input type="checkbox" id="stack"> Vertical special rules</label>
+      <label><input type="checkbox" id="noCardBg"> No card background (transparent)</label>
+      <label><input type="checkbox" id="noRefBody"> No reference body background</label>
     </div>
   </div></details>
   <details><summary>Reference cards</summary><div id="refs">
@@ -280,7 +298,7 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
         </ul>
 
         <h3>Layout &amp; sizes</h3>
-        <p>Card size, text sizes and colours for every part of the card, an optional <b>Traditional border</b> (default 3 mm, like a trading card, drawn in the Border colour), and a <b>Vertical special rules</b> option that stacks the special rules on the front one per line.</p>
+        <p>Card size, text sizes and colours for every part of the card, an optional <b>Traditional border</b> (default 3 mm, like a trading card, drawn in the Border colour), a <b>Vertical special rules</b> option that stacks the special rules on the front one per line, and <b>No card background</b> / <b>No reference body background</b> options that make those fills transparent so an image shows through (PNG exports keep the transparency).</p>
 
         <h3>Play mode</h3>
         <ul>
@@ -295,7 +313,12 @@ body.bordered .card{border:var(--bw) solid var(--cCardBd)}
         </ul>
 
         <h3>Print &amp; export</h3>
-        <p><b>Print</b> lays the cards out on A4, one copy per Play qty. <b>Export PNGs</b> saves every card as a 300 dpi image in a single zip.</p>
+        <p>The <b>Export</b> button opens a menu:</p>
+        <ul>
+          <li><b>Export to Printer</b> lays the cards out on A4, one copy per Play qty. Fronts and backs are placed as separate cards with the same gap everywhere, so you can cut along straight lines.</li>
+          <li><b>Export to PNGs</b> saves every card as a 300 dpi image in a single zip.</li>
+          <li><b>Export to JSON</b> saves the list, play state, images, pasted rules text and layout to one file. With the link box empty, <b>Import</b> asks for that file, so you can move a list to another device.</li>
+        </ul>
 
         <h3>Install &amp; your data</h3>
         <p>You can add the app to your home screen and open it offline. Saved lists, images, play state and pasted text live only in this browser on this device, so they won't appear on another device and are lost if you clear your browser's site data.</p>
@@ -458,6 +481,9 @@ function applyVars() {
   document.body.classList.toggle('bordered', $('bord').checked);
   for (const [id, , def, mn, mx] of FIELDS) { const v = Number($(id).value); root.setProperty('--' + id, Math.max(mn, Math.min(mx, Number.isFinite(v) ? v : def)) + 'mm'); }
   for (const [id, , def] of COLORS) root.setProperty('--' + id, $(id)?.value || def);
+  document.body.classList.toggle('nocardbg', $('noCardBg').checked);
+  if ($('noCardBg').checked) root.setProperty('--cCardBg', 'transparent');
+  root.setProperty('--rbPct', $('noRefBody').checked ? '0%' : '88%');
 }
 
 // ---------- list data ----------
@@ -767,7 +793,7 @@ function render() {
   }
   const r = refCards();
   $('grid').innerHTML = html + r.html;
-  $('print').disabled = $('export').disabled = $('playBtn').disabled = !(printed + r.n);
+  $('export').disabled = $('playBtn').disabled = !(printed + r.n);
   $('info').textContent = [unique && `${unique} unit cards`, printed > unique && `${printed} printed`, r.n && `${r.n} reference cards`].filter(Boolean).join(' · ');
   attachCamera();
 }
@@ -875,20 +901,22 @@ document.querySelectorAll('[data-ref]').forEach(ta => ta.addEventListener('input
 // Layout & sizes (sizes, colours, traditional border, vertical rules) are remembered on this device
 const layoutIds = [...FIELDS, ...COLORS].map(f => f[0]);
 let _layT;
-const saveLayout = () => { clearTimeout(_layT); _layT = setTimeout(() => idb.set('__layout',
-  { ...Object.fromEntries(layoutIds.map(id => [id, $(id).value])), bord: $('bord').checked, stack: $('stack').checked }), 300); };
+const layoutData = () => ({ ...Object.fromEntries(layoutIds.map(id => [id, $(id).value])), bord: $('bord').checked, stack: $('stack').checked,
+  noCardBg: $('noCardBg').checked, noRefBody: $('noRefBody').checked });
+const saveLayout = () => { clearTimeout(_layT); _layT = setTimeout(() => idb.set('__layout', layoutData()), 300); };
 function applyLayout(lay) {
   if (!lay) return;
   for (const id of layoutIds) if (lay[id] != null && $(id)) $(id).value = lay[id];
-  $('bord').checked = !!lay.bord; $('stack').checked = !!lay.stack;
+  $('bord').checked = !!lay.bord; $('stack').checked = !!lay.stack; $('noCardBg').checked = !!lay.noCardBg; $('noRefBody').checked = !!lay.noRefBody;
 }
 const layoutChanged = () => { saveLayout(); render(); };
-['sizes', 'stack', 'bord'].forEach(id => $(id).addEventListener('change', layoutChanged));
+['sizes', 'stack', 'bord', 'noCardBg', 'noRefBody'].forEach(id => $(id).addEventListener('change', layoutChanged));
 $('sizes').addEventListener('input', e => { if (e.target?.type === 'color') layoutChanged(); });
 
 // ---------- import / saved-list dropdown ----------
 async function load() {
   const v = $('url').value.trim();
+  if (!v) { hideDrop(); return $('jsonFile').click(); }   // nothing in the link box: offer to import a JSON export instead
   let id = null;
   try { id = new URL(v).searchParams.get('id'); } catch (_) {}
   id = id || (/^[\w-]+$/.test(v) ? v : null);
@@ -932,9 +960,9 @@ $('urlDrop').addEventListener('click', async e => {
 document.addEventListener('click', e => {
   if (!e.target.closest('.urlwrap')) hideDrop();
   if (!e.target.closest('#xpick')) $('xpick').hidden = true;
+  if (!e.target.closest('.expwrap')) $('expMenu').hidden = true;
   if (!e.target.closest('.imgmenu') && e.target.dataset.up === undefined) document.querySelectorAll('.imgmenu').forEach(m => { m.hidden = true; });
 });
-$('print').onclick = () => print();
 const showTab = n => {
   document.querySelectorAll('.stabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === n));
   document.querySelectorAll('.spane').forEach(p => { p.hidden = p.dataset.pane !== n; });
@@ -943,7 +971,7 @@ const closeSettings = () => { $('settings').hidden = true; };
 $('settingsBtn').onclick = () => { showTab('readme'); $('settings').hidden = false; };
 $('sClose').onclick = closeSettings;
 $('settings').addEventListener('click', e => { if (e.target === $('settings')) closeSettings(); else if (e.target.dataset.tab) showTab(e.target.dataset.tab); });
-document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; $('xpick').hidden = true; if (!$('settings').hidden) closeSettings(); });
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; $('xpick').hidden = true; $('expMenu').hidden = true; if (!$('settings').hidden) closeSettings(); });
 $('wipe').onclick = async () => {
   if (!confirm('Delete ALL Card Forge data on this device?\n\nThis removes saved lists, play state, images and pasted rules text, and cannot be undone.')) return;
   clearTimeout(_saveT); clearTimeout(timer); stopCamera(); army = null; listId = null;
@@ -1233,11 +1261,11 @@ async function cardPng(card, css, vars, size = card) {   // size: an on-screen c
   cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
   return new Uint8Array(await (await new Promise(r => cv.toBlob(r, 'image/png'))).arrayBuffer());
 }
-$('export').onclick = async () => {
+async function exportPngs() {
   const cards = [...document.querySelectorAll('#grid .shell .card')].filter(c => !c.classList.contains('empty')); if (!cards.length) return;
   const css = document.querySelector('style').textContent.replace(/body\.bordered/g, '.xw.bordered') +
-    '.xw{font:14px/1.4 "Trebuchet MS","Segoe UI",system-ui,sans-serif}.xw .art{background:#fff}.xw .card{box-shadow:none}.xw .sec.none{display:none}';
-  const root = document.documentElement.style, vars = [...FIELDS.map(([id]) => id), ...COLORS.map(([id]) => id)].map(id => `--${id}:${root.getPropertyValue('--' + id)}`).join(';');
+    '.xw{font:14px/1.4 "Trebuchet MS","Segoe UI",system-ui,sans-serif}.xw .card{box-shadow:none}.xw .sec.none{display:none}';
+  const root = document.documentElement.style, vars = [...FIELDS.map(([id]) => id), ...COLORS.map(([id]) => id)].map(id => `--${id}:${root.getPropertyValue('--' + id)}`).join(';') + ';--rbPct:' + (root.getPropertyValue('--rbPct') || '88%');
   $('export').disabled = true; const files = [];
   try {
     for (const [i, c] of cards.entries()) {
@@ -1252,7 +1280,47 @@ $('export').onclick = async () => {
     status(`Exported ${cards.length} cards as PNG (300 dpi).`, 'ok');
   } catch (err) { status('Export failed: ' + err.message, 'err'); }
   $('export').disabled = false;
-};
+}
+
+// JSON: everything needed to rebuild this list on another device (list, play state, images, pasted text, layout)
+function exportJson() {
+  const data = { app: 'card-forge', version: 1, exportedAt: new Date().toISOString(), listId, url: $('url').value.trim(),
+    army, state: army ? snapState() : null,
+    images: [...imgs].filter(([k]) => !String(k).startsWith('ref:')), refImages: [...imgs].filter(([k]) => String(k).startsWith('ref:')),
+    refText: { ...refText }, refTitles: [...refTitles], layout: layoutData() };
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+  a.download = (army?.name || 'cards').replace(/[^\w]+/g, '-') + '-cards.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  status('Exported JSON.', 'ok');
+}
+async function importJson(file) {
+  status('Reading file…');
+  try {
+    const d = JSON.parse(await file.text());
+    if (!d || d.app !== 'card-forge') throw new Error('That isn’t a Card Forge JSON export.');
+    const mk = v => ({ src: v.src, t: { o: 100, x: 0, y: 0, z: 100, ...v.t } });
+    if (d.refText) {
+      for (const [k] of REFS) refText[k] = d.refText[k] || '';
+      document.querySelectorAll('[data-ref]').forEach(ta => { ta.value = refText[ta.dataset.ref]; });
+      refTitles.clear(); (d.refTitles || []).forEach(([k, v]) => refTitles.set(k, v)); await saveText();
+    }
+    for (const [k, v] of d.refImages || []) if (v?.src) { imgs.set(k, mk(v)); await idb.set(k, imgs.get(k)); }
+    if (d.layout) { applyLayout(d.layout); saveLayout(); }
+    if (d.army && Array.isArray(d.army.units)) {
+      const id = d.listId || 'json-' + hash((d.army.name || '') + Date.now());
+      await applyList({ id, url: d.url || id, army: d.army }, d.state || {}, true);
+      for (const [k, v] of d.images || []) if (v?.src) { imgs.set(k, mk(v)); await saveImgFor(String(k)); }
+      render(); status(`Imported “${army.name || id}” from JSON · ${(army.units || []).length} units · ${army.listPoints ?? '?'} pts`, 'ok');
+    } else { render(); status('Imported reference cards and settings from JSON.', 'ok'); }
+  } catch (err) { status(err instanceof SyntaxError ? 'That file isn’t valid JSON.' : err.message, 'err'); }
+}
+$('jsonFile').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await importJson(f); });
+$('export').onclick = e => { e.stopPropagation(); $('expMenu').hidden = !$('expMenu').hidden; };
+$('expMenu').addEventListener('click', e => {
+  const b = e.target.closest('[data-exp]'); if (!b) return;
+  $('expMenu').hidden = true;
+  if (b.dataset.exp === 'png') exportPngs(); else if (b.dataset.exp === 'print') print(); else exportJson();
+});
 
 // ---------- startup ----------
 (async () => {
