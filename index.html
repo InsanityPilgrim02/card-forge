@@ -322,6 +322,7 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
           <li><b>Pin / Unpin</b> puts a PINNED stamp on a unit.</li>
           <li>Several copies (Play qty above 1) get their own tracking, with Unit 1, Unit 2… buttons to switch.</li>
           <li><b>Dice</b> rolls any number of d6 against a target and counts successes, 1s and 6s.</li>
+          <li>On spell cards in Play mode, special rules named in a spell's text (for example Evasive, Bane or AP(1)) are underlined. Hover or tap one to see its description, taken from the Faction Special Rules for that faction first, then Core Special Rules.</li>
           <li><b>Spells</b> appears on units with Caster and shows that faction's spell cards. With several spell lists, it picks the one whose title contains the unit's faction name, so name them to match, for example "Prime Brothers Spells". Tap Spells again to return.</li>
           <li>Hover (or tap) a special rule, or a rule inside a weapon's stats, to read its description from your pasted text.</li>
           <li>Wounds, pins and renames are saved with the list.</li>
@@ -737,7 +738,7 @@ $('grid').addEventListener('pointerdown', e => {
 });
 
 function parseRules(raw) {
-  const t = raw.replace(/\r\n?/g, '\n').trim(), re = /(?:^|\n)[ \t]*([A-Za-z][A-Za-z0-9' /+()\-]{0,50}):/g, hits = [];
+  const t = raw.replace(/\r\n?/g, '\n').trim(), re = /(?:^|\n)[ \t]*([A-Za-z][A-Za-z0-9'’& /+()\-]{0,50}):/g, hits = [];
   let m; while ((m = re.exec(t))) hits.push({ n: m[1].trim(), s: m.index, d: m.index + m[0].length });
   return hits.map((h, i) => ({ name: h.n, desc: t.slice(h.d, i + 1 < hits.length ? hits[i + 1].s : t.length).replace(/\s+/g, ' ').trim() }));
 }
@@ -1032,9 +1033,32 @@ function closePlay() {
   play.on = false; play.back = null; play.dice = null; hideTip(); $('play').hidden = true; document.body.style.overflow = '';
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 }
+// Spell cards: special rules named in a spell's text (Evasive, Bane, AP(1)…) get the same hover/tap popup as unit rules.
+// Descriptions come from Faction Special Rules (the block matching this faction, else all of them) first, then Core Special Rules.
+function linkSpellRules(root, hint) {
+  const card = root.matches?.('.card.ref[data-rk^="spells:"]') ? root : root.querySelector?.('.card.ref[data-rk^="spells:"]'); if (!card) return;
+  const rk = card.dataset.rk, bare = String(card.querySelector('[data-cur]')?.dataset.cur || '').replace(/\bspells?\b/gi, '').trim();
+  const fb = blocksOf(refText.faction), pick = pickBlock({ fac: hint || bare }, fb.map((b, i) => ({ title: refTitles.get('faction:' + i) || '', i })));
+  const defs = new Map(), add = e => { const b = ruleBase(e.name); if (b.length > 1 && !defs.has(b)) defs.set(b, e); };
+  (pick ? fb[pick.i] : fb.flat()).forEach(add); parseRules(refText.core).forEach(add);
+  if (!defs.size) return;
+  const re = new RegExp('(^|[^A-Za-z])(' + [...defs.keys()].sort((a, b) => b.length - a.length).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(\\([^)]*\\))?(?![A-Za-z])', 'g');
+  card.querySelectorAll('.re p').forEach(el => {
+    const t = el.textContent; let out = '', last = 0, hit = false, m;
+    re.lastIndex = 0;
+    while ((m = re.exec(t))) {
+      const start = m.index + m[1].length, key = 'sr:' + rk + ':' + m[2].toLowerCase();
+      play.lookup.set(key, defs.get(m[2]));
+      out += esc(t.slice(last, start)) + `<span class="wr" data-tip="${esc(key)}">${esc(t.slice(start, m.index + m[0].length))}</span>`;
+      last = m.index + m[0].length; hit = true;
+    }
+    if (hit) el.innerHTML = out + esc(t.slice(last));
+  });
+}
 // make rules with a known description tappable/hoverable (unit rule chips and weapon special rules)
-function linkRules(root) {
+function linkRules(root, hint = '') {
   const L = play.lookup; if (!L.size) return;
+  linkSpellRules(root, hint);
   root.querySelectorAll('[data-kind]').forEach(el => {   // traits / skills / injuries / talents
     const k = kindKey(el.dataset.kind, el.dataset.name); if (L.has(k)) { el.dataset.tip = k; el.classList.add('rl'); }
   });
@@ -1077,7 +1101,7 @@ function showPlay() {
     const clone = (play.flipped.has(view.baseSid) && view.back ? view.back : view.el).cloneNode(true);
     clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,.addx,.rmx,input').forEach(e => e.remove());
     clone.querySelectorAll('.ed').forEach(e => e.classList.remove('ed'));
-    linkRules(clone);
+    linkRules(clone, unit.ref ? '' : unit.fac);
     wrap.className = 'pwrap' + (isDestroyed(view) ? ' dead' : play.pinned.has(view.sid) ? ' pinned' : ''); wrap.appendChild(clone);
   }
   $('pStage').replaceChildren(wrap);
