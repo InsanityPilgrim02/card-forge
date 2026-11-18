@@ -226,6 +226,7 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
  body.backs #psheet{display:block}
  .ppage{break-after:page}.ppage:last-child{break-after:auto}
  .pgrid{display:grid;gap:2mm;justify-content:center}
+ .pback .pgrid{transform:translate(var(--bsx,0mm),var(--bsy,0mm))}   /* nudges whole back pages to cancel the printer's duplex drift */
  .pcell .card{display:flex!important}
  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
@@ -261,6 +262,7 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
       <label><input type="checkbox" id="noCardBg"> No card background (transparent)</label>
       <label><input type="checkbox" id="noRefBody"> No reference body background</label>
       <label><input type="checkbox" id="cardBacks"> Enable card backs</label>
+      <label><input type="checkbox" id="demoMode"> Demo mode (core special rules only)</label>
     </div>
   </div></details>
   <details><summary>Reference cards</summary><div id="refs">
@@ -333,6 +335,8 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
         <ul>
           <li><b>Export to Printer</b> lays the cards out on A4, one copy per Play qty. Fronts and backs are placed as separate cards with the same gap everywhere, so you can cut along straight lines.</li>
           <li><b>Enable card backs</b> (Layout &amp; sizes) adds one extra card at the end of the grid where you set a shared back image. When printing, every card gets that image on its reverse unless it has campaign info, in which case its campaign back is used. Backs are printed on their own pages, mirrored so they line up behind the fronts: turn on <b>two-sided / duplex printing, flip on long edge</b> in the print dialog. The page can't see your printer's duplex setting, so with duplex off the backs print as separate sheets.</li>
+          <li><b>Demo mode</b> (Layout &amp; sizes) shows core special rules only. Non-core rules are hidden on unit cards and weapons, the Faction Special Rules cards disappear, and any spell, skill, trait, injury or talent whose text uses a non-core rule is hidden too. A rule counts as core if it is in your pasted Core Special Rules (or flagged core in the loaded list), so keep that list complete. Nothing is deleted; turn it off to bring everything back.</li>
+          <li><b>Back page shift</b> (Layout &amp; sizes) moves every back page by a few mm to cancel your printer's duplex drift: positive Right moves the printing to the right, positive Down moves it down, as you see it on the printed side of the back page. Print one page double-sided, hold it to the light, and adjust until the backs sit behind the fronts. Applies only when card backs are enabled.</li>
           <li><b>Export to PNGs</b> saves every card as a 300 dpi image in a single zip.</li>
           <li><b>Export to JSON</b> saves the list, play state, images, pasted rules text and layout to one file. With the link box empty, <b>Import</b> asks for that file, so you can move a list to another device.</li>
         </ul>
@@ -367,7 +371,8 @@ const clampInt = (v, lo, hi, d) => Math.max(lo, Math.min(hi, parseInt(v) || d));
 
 const FIELDS = [['cw','Width mm',63,40,100,.5],['ch','Height mm',88,50,140,.5],['fsName','Name text',2.8,1.5,6,.1],
   ['fsRules','Rules text',2,1.2,5,.1],['fsWpn','Weapon text',2.05,1.2,5,.1],['fsFac','Faction text',1.9,1,5,.1],['bw','Traditional border mm',3,.5,8,.5],
-  ['rt','Ref title',2.8,1.5,5,.1],['rn','Ref name',2.8,1.2,5,.05],['rd','Ref text',2.6,1.1,4,.05]];
+  ['rt','Ref title',2.8,1.5,5,.1],['rn','Ref name',2.8,1.2,5,.05],['rd','Ref text',2.6,1.1,4,.05],
+  ['bsx','Right mm',0,-5,5,.1],['bsy','Down mm',0,-5,5,.1]];
 const COLORS = [
   ['cCardBg','Bg','#ffffff'],['cCardBd','Border','#000000'],
   ['cNameBg','Box','#ffffff'],['cNameFg','Text','#111111'],['cNameBd','Edge','#222222'],
@@ -379,6 +384,7 @@ const COLORS = [
 // size ids + color ids per settings section
 const GROUPS = [
   ['Card',['cw','ch','bw'],['cCardBg','cCardBd']],
+  ['Back page shift (duplex drift)',['bsx','bsy'],[]],
   ['Name',['fsName'],['cNameBg','cNameFg','cNameBd']],
   ['Faction',['fsFac'],['cFacBg','cFacFg']],
   ['Special rules',['fsRules'],['cRuleBg','cRuleFg','cRuleBd']],
@@ -621,6 +627,39 @@ const IMG_UI = `<button class="tool" data-up>Image</button>
       <input type="file" accept="image/*" data-file data-gal hidden>
       <input type="file" accept="image/*" capture="environment" data-file data-cam hidden>`;
 
+// ---------- Demo mode: only core special rules appear; anything built on a non-core rule is hidden ----------
+// "Core" = named in the pasted Core Special Rules, or flagged core in the loaded list data. "Non-core" = faction rules and any other rule the list uses.
+let demo = { on: false, noCore: false, core: new Set(), re: null, gone: {} };
+const demoDrops = (kind, e) => demo.on && kind !== 'core' && (kind === 'faction' || !!(demo.re && demo.re.test(e.desc || '')));
+const demoRule = l => !demo.on || demo.core.has(ruleBase(l).toLowerCase());
+function demoWpn(label) {   // "Staff (A4, Spell Amplifier)" -> "Staff (A4)": keep range, attacks and core rules only
+  if (!demo.on) return label;
+  const i = label.indexOf(' ('), j = label.lastIndexOf(')'); if (i < 0 || j < i) return label;
+  const toks = []; let d = 0, cur = '';
+  for (const ch of label.slice(i + 2, j)) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && !d) { toks.push(cur); cur = ''; } else cur += ch; }
+  toks.push(cur);
+  const keep = toks.map(t => t.trim()).filter(t => t && (/^(\d+["”]?|A\d+)$/i.test(t) || demo.core.has(ruleBase(t).toLowerCase())));
+  return keep.length ? label.slice(0, i + 2) + keep.join(', ') + label.slice(j) : label.slice(0, i);
+}
+function buildDemo() {
+  demo = { on: false, noCore: false, core: new Set(), re: null, gone: {} };
+  if (!$('demoMode').checked) return;
+  const low = n => ruleBase(n).toLowerCase(), core = demo.core, sr = army?.specialRules || [];
+  parseRules(refText.core).forEach(e => core.add(low(e.name)));
+  sr.forEach(r => { if (r.coreType != null) core.add(low(r.name)); });
+  if (!core.size) { demo.noCore = true; return; }
+  const non = new Map(), addNon = n => { const b = ruleBase(n || ''); if (b.length > 2 && !core.has(b.toLowerCase())) non.set(b.toLowerCase(), b); };
+  blocksOf(refText.faction).flat().forEach(e => addNon(e.name));
+  sr.forEach(r => addNon(r.name));
+  for (const u of army?.units || []) {
+    (u.rules || []).forEach(r => addNon(r.name));
+    (u.items || []).forEach(it => (it.content || []).forEach(c => addNon(c.name)));
+    for (const w of [...(u.weapons || []), ...(u.loadout || [])]) (w.specialRules || []).forEach(r => addNon(r.name));
+  }
+  demo.on = true;
+  if (non.size) demo.re = new RegExp('(^|[^A-Za-z])(' + [...non.values()].sort((a, b) => b.length - a.length).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![A-Za-z])');
+  for (const [k] of SECTIONS) demo.gone[k] = new Set(parseRules(refText[k]).filter(e => demoDrops(k, e)).map(e => low(e.name)));
+}
 function cardHtml(u) {
   const sid = sidOf(u), aid = armyKey(u), q = u.quality != null ? u.quality + '+' : '–', d = u.defense != null ? u.defense + '+' : '–';
   return `<article class="card front" data-sid="${esc(sid)}" data-aid="${esc(aid)}" data-qty="${qty.get(sid) || 1}" data-n="${u.size || 1}" data-t="${esc(toughOf(u))}" style="${tVars(imgs.get(sid)?.t)}">
@@ -629,8 +668,8 @@ function cardHtml(u) {
       <div class="ov${$('stack').checked ? ' stack' : ''}">
         <div class="namebox">${FLIP_BTN}<b class="flag${hasCamp(u) ? '' : ' off'}">!</b><div class="nm"><span class="ed" data-nm>${esc(nameOf(u))}</span> [${u.size || 1}]</div><div>${costOf(u)}pts</div></div>
         <div class="fac ed" data-fac="${esc(aid)}">${esc(factionOf(u))}</div>
-        <div class="rules">${rulesOf(u).map(r => `<span class="chip ed" data-rule="${esc(r)}">${esc(ruleDisp(r, aid))}</span>`).join('')}</div>
-        <div class="weapons">${weaponsOf(u).map(w => `<div class="wpn ed" data-wpn="${esc(w)}">${esc(wpnDisp(w, aid))}</div>`).join('')}</div>
+        <div class="rules">${rulesOf(u).filter(demoRule).map(r => `<span class="chip ed" data-rule="${esc(r)}">${esc(ruleDisp(r, aid))}</span>`).join('')}</div>
+        <div class="weapons">${weaponsOf(u).map(w => `<div class="wpn ed" data-wpn="${esc(w)}">${esc(wpnDisp(demoWpn(w), aid))}</div>`).join('')}</div>
         <div class="stats">${[['Quality', q], ['Defense', d], ['Tough', toughOf(u)]].map(([l, v]) => `<div class="stat"><b>${l}</b><i>${esc(v)}</i></div>`).join('')}</div>
       </div>
       ${IMG_UI}
@@ -650,7 +689,7 @@ const FLIP_BTN = '<button type="button" class="flip" aria-label="Flip card"><svg
 const xpOf = u => xps.has(String(sidOf(u))) ? xps.get(String(sidOf(u))) : Number(u.xp) || 0;   // Army Forge's XP until you change it here
 function campOf(u = {}) {   // only what was added by hand; nothing is imported except XP
   const ex = extras.get(String(sidOf(u))) || {}, out = { xp: xpOf(u) };
-  for (const [k] of SECTIONS) out[k] = [...new Set((ex[k] || []).filter(Boolean))];
+  for (const [k] of SECTIONS) out[k] = [...new Set((ex[k] || []).filter(Boolean))].filter(n => !demo.gone[k]?.has(ruleBase(n).toLowerCase()));
   return out;
 }
 const hasCamp = u => { const c = campOf(u); return c.xp > 0 || sectionsFor(u).some(([k]) => c[k].length); };   // drives the "!" and whether the back prints
@@ -699,7 +738,7 @@ function openPick(btn) {   // choose from the pasted list, or type a name
   const kind = btn.dataset.add, sid = btn.closest('.shell')?.dataset.ushell, box = $('xpick');
   const have = new Set(campOf(unitBySid(sid))[kind].map(n => n.toLowerCase()));
   box._ctx = { kind, sid };
-  box.innerHTML = parseRules(refText[kind]).map(e => e.name).filter(n => !have.has(n.toLowerCase())).map(n => `<button type="button" data-pn="${esc(n)}">${esc(n)}</button>`).join('')
+  box.innerHTML = parseRules(refText[kind]).filter(e => !demoDrops(kind, e)).map(e => e.name).filter(n => !have.has(n.toLowerCase())).map(n => `<button type="button" data-pn="${esc(n)}">${esc(n)}</button>`).join('')
     + '<button type="button" class="cust" data-pcustom>Type a name…</button>';
   box.hidden = false;
   const r = btn.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
@@ -777,8 +816,8 @@ function refCards() {
   let html = '', n = 0;
   for (const [k, base] of REFS) {
     const blocks = SINGLE.has(k) ? [parseRules(refText[k])] : blocksOf(refText[k]);
-    blocks.forEach((entries, bi) => {
-      if (!entries.length) return;
+    blocks.forEach((all, bi) => {
+      const entries = all.filter(e => !demoDrops(k, e)); if (!entries.length) return;
       const key = `${k}:${bi}`, sid = 'ref:' + key, title = refTitles.get(key) || (blocks.length > 1 ? `${base} ${bi + 1}` : base);
       const pages = paginate(entries, title, k === 'spells'), im = imgs.get(sid), style = (k === 'spells' ? spellVars() : '') + tVars(im?.t);
       pages.forEach((p, i) => {
@@ -800,6 +839,7 @@ const GB = 'ref:cardback';   // the one shared back image; saved, exported and r
 const gbackHtml = () => { const im = imgs.get(GB); return `<article class="card gback" data-sid="${GB}" style="${tVars(im?.t)}"><div class="body">${artHtml(im)}${im ? '' : '<div class="gbhint">Card back<small>Add an image. It prints on the reverse of every card that has no campaign info.</small></div>'}${IMG_UI}</div></article>`; };
 function render() {
   applyVars();
+  buildDemo();
   let html = '', unique = 0, printed = 0;
   let units = army ? prepare(army.units || []) : [];
   if (cardOrder.length) {   // your dragged order; anything new stays in list order after it
@@ -922,15 +962,16 @@ document.querySelectorAll('[data-ref]').forEach(ta => ta.addEventListener('input
 const layoutIds = [...FIELDS, ...COLORS].map(f => f[0]);
 let _layT;
 const layoutData = () => ({ ...Object.fromEntries(layoutIds.map(id => [id, $(id).value])), bord: $('bord').checked, stack: $('stack').checked,
-  noCardBg: $('noCardBg').checked, noRefBody: $('noRefBody').checked, cardBacks: $('cardBacks').checked });
+  noCardBg: $('noCardBg').checked, noRefBody: $('noRefBody').checked, cardBacks: $('cardBacks').checked, demoMode: $('demoMode').checked });
 const saveLayout = () => { clearTimeout(_layT); _layT = setTimeout(() => idb.set('__layout', layoutData()), 300); };
 function applyLayout(lay) {
   if (!lay) return;
   for (const id of layoutIds) if (lay[id] != null && $(id)) $(id).value = lay[id];
-  $('bord').checked = !!lay.bord; $('stack').checked = !!lay.stack; $('noCardBg').checked = !!lay.noCardBg; $('noRefBody').checked = !!lay.noRefBody; $('cardBacks').checked = !!lay.cardBacks;
+  $('bord').checked = !!lay.bord; $('stack').checked = !!lay.stack; $('noCardBg').checked = !!lay.noCardBg; $('noRefBody').checked = !!lay.noRefBody; $('cardBacks').checked = !!lay.cardBacks; $('demoMode').checked = !!lay.demoMode;
 }
 const layoutChanged = () => { saveLayout(); render(); };
-['sizes', 'stack', 'bord', 'noCardBg', 'noRefBody', 'cardBacks'].forEach(id => $(id).addEventListener('change', layoutChanged));
+['sizes', 'stack', 'bord', 'noCardBg', 'noRefBody', 'cardBacks', 'demoMode'].forEach(id => $(id).addEventListener('change', layoutChanged));
+$('demoMode').addEventListener('change', () => { if ($('demoMode').checked && demo.noCore) status('Demo mode needs the Core Special Rules pasted into the reference cards (or a loaded list) so it knows which rules are core. Nothing was hidden.', 'err'); });
 $('sizes').addEventListener('input', e => { if (e.target?.type === 'color') layoutChanged(); });
 
 // ---------- import / saved-list dropdown ----------
@@ -1369,12 +1410,12 @@ function buildPrintSheets() {
     .map(c => ({ front: c.querySelector('.card.front, .card.ref'), back: c.querySelector('.card.back:not(.empty)') })).filter(e => e.front);
   const generic = imgs.get(GB) ? gbackHtml().replace(/<div class="gbhint">.*?<\/div>/, '') : '';
   const cell = (html, i, col) => html ? `<div class="pcell" style="grid-row:${Math.floor(i / cols) + 1};grid-column:${col + 1}">${html}</div>` : '';
-  const page = cells => `<section class="ppage"><div class="pgrid" style="grid-template-columns:repeat(${cols},var(--cw));grid-auto-rows:var(--ch)">${cells.join('')}</div></section>`;
+  const page = (cells, cls = '') => `<section class="ppage ${cls}"><div class="pgrid" style="grid-template-columns:repeat(${cols},var(--cw));grid-auto-rows:var(--ch)">${cells.join('')}</div></section>`;
   let html = '';
   for (let i = 0; i < E.length; i += per) {
     const chunk = E.slice(i, i + per), backs = chunk.map(e => e.back ? e.back.outerHTML : generic);
     html += page(chunk.map((e, k) => cell(e.front.outerHTML, k, k % cols)));
-    if (backs.some(Boolean)) html += page(backs.map((b, k) => cell(b, k, cols - 1 - (k % cols))));
+    if (backs.some(Boolean)) html += page(backs.map((b, k) => cell(b, k, cols - 1 - (k % cols))), 'pback');
   }
   out.innerHTML = html;
 }
