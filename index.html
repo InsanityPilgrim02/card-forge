@@ -6,6 +6,7 @@
 <title>Card Forge · OPR</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14161a">
+<meta name="cf-build" content="2026-11-18.3">   <!-- bump on every release: the update check compares this against the server copy -->
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -186,6 +187,7 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
 #pTip{position:fixed;z-index:120;max-width:min(340px,90vw);background:#fff;color:#111;border-radius:8px;padding:8px 11px;box-shadow:0 6px 24px rgba(0,0,0,.6);pointer-events:none;font-size:13px;line-height:1.35}
 #pTip b{display:block;margin-bottom:2px}#pTip p{margin:0}
 /* settings window */
+#settings .supd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}#settings .supd .hint{margin:0}
 #settings{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:12px}
 .sbox{width:min(720px,100%);max-height:min(88vh,100%);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
 .shead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:2px solid var(--amber)}
@@ -278,6 +280,7 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
     <div class="shead"><h2>Settings</h2><button id="sClose">✕ Close</button></div>
     <div class="stabs"><button data-tab="readme" class="on">Readme</button><button data-tab="data">Data</button></div>
     <div class="sbody">
+      <div class="supd"><button id="updBtn">Look for updates</button><span id="updMsg" class="hint"></span></div>
       <div class="spane" data-pane="readme">
         <h3>What this is</h3>
         <p>Card Forge turns an Army Forge list into printable unit cards, and doubles as a tabletop companion: Play mode shows one big card at a time with wound tracking, dice and rule popups. It's an unofficial fan tool and isn't affiliated with One Page Rules. Rules text isn't included, so you paste your own.</p>
@@ -337,6 +340,7 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
           <li><b>Enable card backs</b> (Layout &amp; sizes) adds one extra card at the end of the grid where you set a shared back image. When printing, every card gets that image on its reverse unless it has campaign info, in which case its campaign back is used. Backs are printed on their own pages, mirrored so they line up behind the fronts: turn on <b>two-sided / duplex printing, flip on long edge</b> in the print dialog. The page can't see your printer's duplex setting, so with duplex off the backs print as separate sheets.</li>
           <li><b>Demo mode</b> (Layout &amp; sizes) shows core special rules only. Non-core rules are hidden on unit cards and weapons, the Faction Special Rules cards disappear, and any spell, skill, trait, injury or talent whose text uses a non-core rule is hidden too. A rule counts as core if it is in your pasted Core Special Rules (or flagged core in the loaded list), so keep that list complete. Nothing is deleted; turn it off to bring everything back.</li>
           <li><b>Back page shift</b> (Layout &amp; sizes) moves every back page by a few mm to cancel your printer's duplex drift: positive Right moves the printing to the right, positive Down moves it down, as you see it on the printed side of the back page. Print one page double-sided, hold it to the light, and adjust until the backs sit behind the fronts. Applies only when card backs are enabled.</li>
+          <li><b>Look for updates</b> (top of Settings). The installed app runs from its offline copy and only checks for a newer version when you press this button, so nothing runs in the background. If one is found, <b>Update now</b> downloads it and reloads. Your lists, images and settings are kept. In a normal browser tab it also checks once when the page opens.</li>
           <li><b>Export to PNGs</b> saves every card as a 300 dpi image in a single zip.</li>
           <li><b>Export to JSON</b> saves the list, play state, images, pasted rules text and layout to one file. With the link box empty, <b>Import</b> asks for that file, so you can move a list to another device.</li>
         </ul>
@@ -1029,6 +1033,53 @@ const showTab = n => {
   document.querySelectorAll('.spane').forEach(p => { p.hidden = p.dataset.pane !== n; });
 };
 const closeSettings = () => { $('settings').hidden = true; };
+// ---------- updates ----------
+// The installed app runs from its offline copy and never looks for updates by itself: only the Settings button does.
+// A normal browser tab checks once when it opens and downloads any newer copy for the next reload.
+const APP_CACHE = 'card-forge-app', INDEX_URL = new URL('index.html', document.baseURI).href;   // keep both in step with sw.js
+const isApp = ['standalone', 'fullscreen', 'minimal-ui'].some(m => matchMedia(`(display-mode: ${m})`).matches) || navigator.standalone === true;
+let updState = 'idle';
+const updUi = (msg, btn) => { $('updMsg').textContent = msg; if (btn) $('updBtn').textContent = btn; };
+async function serverBuild() {
+  const res = await fetch(INDEX_URL + '?cf=' + Date.now(), { cache: 'no-store' });   // no-store requests bypass the service worker and go to the network
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return /name="cf-build" content="([^"]+)"/.exec(await res.text())?.[1] || null;
+}
+async function downloadUpdate() {   // fetch everything first, then swap it in, so a failed download leaves the old version intact
+  const cache = await caches.open(APP_CACHE), urls = new Set((await cache.keys()).map(r => r.url)); urls.add(INDEX_URL);
+  const fresh = [];
+  for (const u of urls) {
+    const res = await fetch(u + (u.includes('?') ? '&' : '?') + 'cf=' + Date.now(), { cache: 'no-store' });
+    if (res.ok) fresh.push([u, res.redirected ? new Response(await res.blob(), { status: 200, headers: res.headers }) : res]);
+    else if (u === INDEX_URL) throw new Error('HTTP ' + res.status);
+  }
+  for (const [u, res] of fresh) await cache.put(u, res);
+}
+async function checkUpdate(auto) {
+  if (!window.caches || !location.protocol.startsWith('http')) { if (!auto) updUi('Updates can only be checked when the app is opened from its web address.'); return; }
+  const btn = $('updBtn'); btn.disabled = true; if (!auto) updUi('Checking…');
+  try {
+    const theirs = await serverBuild(), mine = document.querySelector('meta[name="cf-build"]')?.content;
+    if (!theirs || !mine) { if (!auto) updUi('Couldn’t tell which version the server has.'); }
+    else if (theirs === mine) { if (!auto) updUi('You’re up to date.'); }
+    else if (auto) { await downloadUpdate(); updState = 'downloaded'; updUi('A new version was downloaded. Reload to use it.', 'Reload to update'); }
+    else { updState = 'found'; updUi('A new version is available. Your lists, images and settings are kept.', 'Update now'); }
+  } catch (err) { if (!auto) updUi('Couldn’t reach the server. Check your connection and try again.'); }
+  btn.disabled = false;
+}
+$('updBtn').onclick = async () => {
+  if (updState === 'downloaded') return location.reload();
+  if (updState === 'found') {
+    $('updBtn').disabled = true; updUi('Updating…');
+    try { await downloadUpdate(); } catch (err) { updUi('Download failed. Check your connection and try again.'); $('updBtn').disabled = false; return; }
+    return location.reload();
+  }
+  checkUpdate(false);
+};
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (!isApp) checkUpdate(true);
+}
 $('settingsBtn').onclick = () => { showTab('readme'); $('settings').hidden = false; };
 $('sClose').onclick = closeSettings;
 $('settings').addEventListener('click', e => { if (e.target === $('settings')) closeSettings(); else if (e.target.dataset.tab) showTab(e.target.dataset.tab); });
@@ -1442,7 +1493,6 @@ $('expMenu').addEventListener('click', e => {
   if (qid) { $('url').value = qid; load(); } else render();
 })();
 })();
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
