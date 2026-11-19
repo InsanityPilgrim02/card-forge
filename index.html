@@ -85,6 +85,9 @@ textarea{width:100%;min-height:80px;margin-top:6px;padding:8px;background:var(--
 .fac{align-self:center;background:var(--cFacBg);color:var(--cFacFg);font-size:var(--fsFac);font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.7mm 2.4mm;border-radius:3mm;max-width:95%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rules{display:flex;flex-wrap:wrap;gap:1mm}
 .stack .rules{flex-direction:column;align-items:flex-start}
+.moves{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:1mm;margin-top:auto}   /* Firefight special movement rules: bottom right, just above the weapons */
+.moves+.weapons{margin-top:0}
+.stack .moves{flex-direction:column;align-items:flex-end}
 .chip{background:var(--cRuleBg);color:var(--cRuleFg);border:.25mm solid var(--cRuleBd);border-radius:3mm;padding:.55mm 1.3mm;font-size:var(--fsRules);font-weight:650;line-height:1.2}
 .weapons{display:flex;flex-direction:column;gap:.6mm;margin-top:auto}
 .wpn{background:var(--cWpnBg);color:var(--cWpnFg);border:.25mm solid var(--cWpnBd);border-radius:3mm;padding:.45mm 1mm;font-size:var(--fsWpn);line-height:1.25;font-weight:550}
@@ -303,13 +306,14 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
         <ul>
           <li>Open <b>Reference cards</b> and paste text into Core Special Rules, Faction Special Rules and Faction Spells. Write one rule per line as <code>Name:description</code>.</li>
           <li>In Faction Special Rules and Faction Spells, leave a <b>blank line between factions</b>. Each faction gets its own cards and its own title; click a title to rename it. Long lists split across cards automatically.</li>
+          <li>Core Special Rules, Faction Special Rules and Faction Spells are kept in two collapsible sections: <b>Grimdark Future</b> and <b>Grimdark Future: Firefight</b> (which also has <b>Special Movement</b>). On Firefight unit cards, every unit always gets Falling, Pushing and Jumping (the list data doesn't include them), and any rule listed in Special Movement moves out of the main rules row. These sit at the bottom right, just above the weapons. Cards show the rules for the imported list's game system, picked automatically (Firefight lists use the Firefight boxes; anything else, or no list loaded, uses Grimdark Future).</li>
           <li>Reference cards can have images too, with the same sliders and Remove button.</li>
           <li>If you rename a rule on a unit card, change it in your pasted text as well so the Play mode popups still match. The pasted text is saved automatically.</li>
         </ul>
 
         <h3>Campaign: injuries, talents, traits &amp; skills</h3>
         <ul>
-          <li>Paste your <b>Injuries</b>, <b>Talents</b>, <b>Traits</b> and <b>Skills</b> into their own boxes under Reference cards (<code>Name:description</code>). Each becomes a reference card. Nothing here is imported from Army Forge except a unit's XP.</li>
+          <li>Paste your <b>Injuries</b>, <b>Talents</b>, <b>Traits</b> and <b>Skills</b> into their own boxes in the <b>Campaign info</b> section under Reference cards (<code>Name:description</code>). Each becomes a reference card. Nothing here is imported from Army Forge except a unit's XP.</li>
           <li>None of this shows on the front of a card. Press the round <b>flip</b> button at the left of the name box to turn it over (press again to turn back). A red <b>!</b> beside the button means the back has something on it.</li>
           <li>The back lists Injuries, Talents, Traits and Skills, each under its own heading. <b>Heroes</b> get all four; every other unit only gets <b>Talents</b>. Use <b>+ Add</b> to pick from your pasted list, or type your own; <b>×</b> removes one.</li>
           <li><b>XP</b> sits at the bottom of the back. Use − and + to change it, or click the number to type one. It starts at Army Forge's value.</li>
@@ -396,7 +400,10 @@ const GROUPS = [
   ['Reference cards',['rt','rn','rd'],['cRefTopBg','cRefTopFg','cRefBody','cRefName','cRefDesc']]];
 const REFS = [['core','Core Special Rules'],['faction','Faction Special Rules'],['spells','Faction Spells'],
   ['injuries','Injuries'],['talents','Talents'],['traits','Traits'],['skills','Skills']];
-const SINGLE = new Set(['core', 'skills', 'traits', 'injuries', 'talents']);   // one list each; faction/spells split into factions on blank lines
+const FFREFS = [['ff_core','Core Special Rules'],['ff_faction','Faction Special Rules'],['ff_spells','Faction Spells'],['ff_move','Special Movement']];
+const ALLREFS = [...REFS, ...FFREFS];   // everything that is saved, imported and exported
+const FFKIND = new Set(['core','faction','spells','move']);   // reference kinds that exist once per game system
+const SINGLE = new Set(['core', 'move', 'skills', 'traits', 'injuries', 'talents']);   // one list each; faction/spells split into factions on blank lines
 const TR = [['o','Opacity',0,100],['x','Horiz',-50,50],['y','Vert',-50,50],['z','Zoom',50,250]];
 
 let army = null, listId = null;
@@ -405,7 +412,12 @@ const ruleNames = new Map(), wpnNames = new Map();    // armyId::name -> custom 
 const imgs = new Map(), qty = new Map(), names = new Map(), facs = new Map();
 const extras = new Map(), flipped = new Set(), xps = new Map();   // xps: unit id -> XP set here (overrides the list's value)
 let cardOrder = [];   // unit ids in the order you dragged them   // extras: unit id -> { skills, traits, injuries, talents } added by hand; flipped: cards showing their back
-const refText = Object.fromEntries(REFS.map(([k]) => [k, ''])), refTitles = new Map();   // refTitles key 'kind:blockIndex'
+const refText = Object.fromEntries(ALLREFS.map(([k]) => [k, ''])), refTitles = new Map();   // refTitles key 'kind:blockIndex'
+// Game system for the reference cards is read from the imported list.
+const AUTO_FF = /firefight|^gff$/i;
+function isFF() { return AUTO_FF.test(String(army?.gameSystem || '')); }   // set automatically from the list: gameSystem "gf" = Grimdark Future, "gff" = Firefight
+const RT = k => refText[isFF() && FFKIND.has(k) ? 'ff_' + k : k] || '';   // the active system's text for core / faction / spells / move
+const rkey = (k, bi) => `${k}:${isFF() ? 'ff' : ''}${bi}`;               // card key; Firefight cards keep their own titles and images
 
 // ---------- storage (IndexedDB) ----------
 // keys: <unit name> image · ref:<kind>:<n> ref-card image · __text · __lists · __list:<id> · __state:<id>
@@ -454,9 +466,9 @@ function applyState(st = {}) {
 async function persistList(full) {
   if (!army || !listId) return;
   const name = army.name || listId, now = Date.now();
-  if (full) await idb.set(listKey(listId), { id: listId, url: $('url').value.trim() || listId, name, pts: army.listPoints, savedAt: now, army });
+  if (full) await idb.set(listKey(listId), { id: listId, url: $('url').value.trim() || listId, name, pts: army.listPoints, gs: army.gameSystem || '', savedAt: now, army });
   await idb.set(stateKey(listId), snapState());
-  const all = [{ id: listId, name, pts: army.listPoints, savedAt: now }, ...(await listIndex()).filter(x => x.id !== listId)];
+  const all = [{ id: listId, name, pts: army.listPoints, gs: army.gameSystem || '', savedAt: now }, ...(await listIndex()).filter(x => x.id !== listId)];
   for (const x of all.slice(30)) { idb.del(listKey(x.id)); idb.del(stateKey(x.id)); }   // keep the 30 most recent
   await idb.set('__lists', all.slice(0, 30));
 }
@@ -481,11 +493,15 @@ async function applyList(entry, state, fromNet) {
     (state && ((state.wounds || []).length || (state.pinned || []).length) ? ' · play state restored' : ''), 'ok');
   await persistList(fromNet); render();
 }
+const sysTag = g => g ? ` [${String(g).toUpperCase()}]` : '';   // gf → [GF], gff → [GFF]
 async function showDrop() {
   const idx = await listIndex(), box = $('urlDrop');
+  let fixed = false;   // lists saved before this existed: read the system from the saved list once
+  for (const e of idx) if (e.gs == null) { e.gs = (await idb.get(listKey(e.id)))?.army?.gameSystem || ''; fixed = true; }
+  if (fixed) await idb.set('__lists', idx);
   if (!idx.length) { box.hidden = true; box.innerHTML = ''; return; }
   box.innerHTML = idx.map(e =>
-    `<div class="li"><button type="button" class="li-main" data-lid="${esc(e.id)}"><b>${esc(e.name || e.id)}</b>` +
+    `<div class="li"><button type="button" class="li-main" data-lid="${esc(e.id)}"><b>${esc(e.name || e.id)}${esc(sysTag(e.gs))}</b>` +
     `<small>${e.pts != null ? e.pts + ' pts · ' : ''}${new Date(e.savedAt).toLocaleString()}</small></button>` +
     `<button type="button" class="li-x" data-del="${esc(e.id)}" title="Remove saved list">✕</button></div>`
   ).join('') + `<button type="button" class="li-clear" data-clear="1">Clear saved lists</button>`;
@@ -499,8 +515,11 @@ $('sizes').innerHTML = GROUPS.map(([title, sids, cids]) =>
   sids.map(id => { const [, l, v, mn, mx, st] = FIELDS.find(f => f[0] === id); return `<label>${l}<input type="number" id="${id}" value="${v}" min="${mn}" max="${mx}" step="${st}"></label>`; }).join('') +
   cids.map(id => { const [, l, v] = COLORS.find(c => c[0] === id); return `<label>${l}<input type="color" id="${id}" value="${v}"></label>`; }).join('') +
   `</div></div>`).join('');
-$('refs').insertAdjacentHTML('beforeend', REFS.map(([k, t]) =>
-  `<label class="hint">${t}</label><textarea data-ref="${k}" placeholder="Name:description"></textarea>`).join(''));
+const refBox = ([k, t]) => `<label class="hint">${t}</label><textarea data-ref="${k}" placeholder="Name:description"></textarea>`;
+$('refs').insertAdjacentHTML('beforeend',
+  `<details><summary>Grimdark Future</summary><div>${REFS.slice(0, 3).map(refBox).join('')}</div></details>` +
+  `<details><summary>Grimdark Future: Firefight</summary><div>${FFREFS.map(refBox).join('')}</div></details>` +
+  `<details><summary>Campaign info</summary><div>${REFS.slice(3).map(refBox).join('')}</div></details>`);
 
 function applyVars() {
   const root = document.documentElement.style;
@@ -648,11 +667,11 @@ function buildDemo() {
   demo = { on: false, noCore: false, core: new Set(), re: null, gone: {} };
   if (!$('demoMode').checked) return;
   const low = n => ruleBase(n).toLowerCase(), core = demo.core, sr = army?.specialRules || [];
-  parseRules(refText.core).forEach(e => core.add(low(e.name)));
+  parseRules(RT('core')).forEach(e => core.add(low(e.name)));
   sr.forEach(r => { if (r.coreType != null) core.add(low(r.name)); });
   if (!core.size) { demo.noCore = true; return; }
   const non = new Map(), addNon = n => { const b = ruleBase(n || ''); if (b.length > 2 && !core.has(b.toLowerCase())) non.set(b.toLowerCase(), b); };
-  blocksOf(refText.faction).flat().forEach(e => addNon(e.name));
+  blocksOf(RT('faction')).flat().forEach(e => addNon(e.name));
   sr.forEach(r => addNon(r.name));
   for (const u of army?.units || []) {
     (u.rules || []).forEach(r => addNon(r.name));
@@ -663,6 +682,19 @@ function buildDemo() {
   if (non.size) demo.re = new RegExp('(^|[^A-Za-z])(' + [...non.values()].sort((a, b) => b.length - a.length).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![A-Za-z])');
   for (const [k] of SECTIONS) demo.gone[k] = new Set(parseRules(refText[k]).filter(e => demoDrops(k, e)).map(e => low(e.name)));
 }
+// Firefight: unit rules named in the Special Movement list leave the main rules row and sit bottom right, just above the weapons.
+const FF_MOVES = ['Falling', 'Pushing', 'Jumping'];   // built-in special movement rules for every Firefight unit
+function rulesHtml(u, aid) {
+  const mv = isFF() ? new Set(parseRules(RT('move')).map(e => ruleBase(e.name).toLowerCase())) : new Set();
+  const chip = r => `<span class="chip ed" data-rule="${esc(r)}">${esc(ruleDisp(r, aid))}</span>`;
+  const all = rulesOf(u).filter(demoRule), isMv = r => mv.has(ruleBase(r).toLowerCase());
+  const moves = all.filter(isMv);
+  if (isFF()) {   // every Firefight unit has these, but the list data never includes them
+    const have = new Set(moves.map(r => ruleBase(r).toLowerCase()));
+    moves.unshift(...FF_MOVES.filter(n => !have.has(n.toLowerCase())));
+  }
+  return `<div class="rules">${all.filter(r => !isMv(r)).map(chip).join('')}</div>` + (moves.length ? `<div class="moves">${moves.map(chip).join('')}</div>` : '');
+}
 function cardHtml(u) {
   const sid = sidOf(u), aid = armyKey(u), q = u.quality != null ? u.quality + '+' : '–', d = u.defense != null ? u.defense + '+' : '–';
   return `<article class="card front" data-sid="${esc(sid)}" data-aid="${esc(aid)}" data-qty="${qty.get(sid) || 1}" data-n="${u.size || 1}" data-t="${esc(toughOf(u))}" style="${tVars(imgs.get(sid)?.t)}">
@@ -671,7 +703,7 @@ function cardHtml(u) {
       <div class="ov${$('stack').checked ? ' stack' : ''}">
         <div class="namebox">${FLIP_BTN}<b class="flag${hasCamp(u) ? '' : ' off'}">!</b><div class="nm"><span class="ed" data-nm>${esc(nameOf(u))}</span> [${u.size || 1}]</div><div>${costOf(u)}pts</div></div>
         <div class="fac ed" data-fac="${esc(aid)}">${esc(factionOf(u))}</div>
-        <div class="rules">${rulesOf(u).filter(demoRule).map(r => `<span class="chip ed" data-rule="${esc(r)}">${esc(ruleDisp(r, aid))}</span>`).join('')}</div>
+        ${rulesHtml(u, aid)}
         <div class="weapons">${weaponsOf(u).map(w => `<div class="wpn ed" data-wpn="${esc(w)}">${esc(wpnDisp(demoWpn(w), aid))}</div>`).join('')}</div>
         <div class="stats">${[['Quality', q], ['Defense', d], ['Tough', toughOf(u)]].map(([l, v]) => `<div class="stat"><b>${l}</b><i>${esc(v)}</i></div>`).join('')}</div>
       </div>
@@ -817,11 +849,12 @@ function paginate(entries, title, spells) {
 }
 function refCards() {
   let html = '', n = 0;
-  for (const [k, base] of REFS) {
-    const blocks = SINGLE.has(k) ? [parseRules(refText[k])] : blocksOf(refText[k]);
+  const ff = isFF(), order = [...REFS.slice(0, 3), ...(ff ? [['move', 'Special Movement']] : []), ...REFS.slice(3)];
+  for (const [k, base] of order) {
+    const txt = RT(k), blocks = SINGLE.has(k) ? [parseRules(txt)] : blocksOf(txt);
     blocks.forEach((all, bi) => {
       const entries = all.filter(e => !demoDrops(k, e)); if (!entries.length) return;
-      const key = `${k}:${bi}`, sid = 'ref:' + key, title = refTitles.get(key) || (blocks.length > 1 ? `${base} ${bi + 1}` : base);
+      const key = rkey(k, bi), sid = 'ref:' + key, title = refTitles.get(key) || (blocks.length > 1 ? `${base} ${bi + 1}` : base);
       const pages = paginate(entries, title, k === 'spells'), im = imgs.get(sid), style = (k === 'spells' ? spellVars() : '') + tVars(im?.t);
       pages.forEach((p, i) => {
         n++;
@@ -857,7 +890,7 @@ function render() {
   const r = refCards();
   $('grid').innerHTML = html + r.html + ($('cardBacks').checked ? `<div class="shell gbshell">${gbackHtml()}${ctlHtml(GB, false)}</div>` : '');
   $('export').disabled = $('playBtn').disabled = !(printed + r.n);
-  $('info').textContent = [unique && `${unique} unit cards`, printed > unique && `${printed} printed`, r.n && `${r.n} reference cards`].filter(Boolean).join(' · ');
+  $('info').textContent = [unique && `${unique} unit cards`, printed > unique && `${printed} printed`, r.n && `${r.n} reference cards`, army && `${isFF() ? 'Grimdark Future: Firefight' : 'Grimdark Future'} rules`].filter(Boolean).join(' · ');
   attachCamera();
 }
 
@@ -1099,7 +1132,7 @@ const isPrimary = x => x.ref || x.copy === 1;   // extra copies of a unit are re
 const unitIdx = () => { const b = play.list[play.back]; return b && !b.ref ? play.back : play.i; };
 function buildLookup() {
   const m = new Map(), add = e => { const k = ruleBase(e.name).toLowerCase(); if (k && !m.has(k)) m.set(k, e); };
-  blocksOf(refText.faction).flat().forEach(add); blocksOf(refText.spells).flat().forEach(add); parseRules(refText.core).forEach(add);
+  blocksOf(RT('faction')).flat().forEach(add); blocksOf(RT('spells')).flat().forEach(add); parseRules(RT('core')).forEach(add); parseRules(RT('move')).forEach(add);
   for (const [k] of SECTIONS) parseRules(refText[k]).forEach(e => { const key = kindKey(k, e.name); if (!m.has(key)) m.set(key, e); });
   return m;
 }
@@ -1129,9 +1162,9 @@ function closePlay() {
 function linkSpellRules(root, hint) {
   const card = root.matches?.('.card.ref[data-rk^="spells:"]') ? root : root.querySelector?.('.card.ref[data-rk^="spells:"]'); if (!card) return;
   const rk = card.dataset.rk, bare = String(card.querySelector('[data-cur]')?.dataset.cur || '').replace(/\bspells?\b/gi, '').trim();
-  const fb = blocksOf(refText.faction), pick = pickBlock({ fac: hint || bare }, fb.map((b, i) => ({ title: refTitles.get('faction:' + i) || '', i })));
+  const fb = blocksOf(RT('faction')), pick = pickBlock({ fac: hint || bare }, fb.map((b, i) => ({ title: refTitles.get(rkey('faction', i)) || '', i })));
   const defs = new Map(), add = e => { const b = ruleBase(e.name); if (b.length > 1 && !defs.has(b)) defs.set(b, e); };
-  (pick ? fb[pick.i] : fb.flat()).forEach(add); parseRules(refText.core).forEach(add);
+  (pick ? fb[pick.i] : fb.flat()).forEach(add); parseRules(RT('core')).forEach(add);
   if (!defs.size) return;
   const re = new RegExp('(^|[^A-Za-z])(' + [...defs.keys()].sort((a, b) => b.length - a.length).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(\\([^)]*\\))?(?![A-Za-z])', 'g');
   card.querySelectorAll('.re p').forEach(el => {
@@ -1434,7 +1467,7 @@ async function importJson(file) {
     if (!d || d.app !== 'card-forge') throw new Error('That isn’t a Card Forge JSON export.');
     const mk = v => ({ src: v.src, t: { o: 100, x: 0, y: 0, z: 100, ...v.t } });
     if (d.refText) {
-      for (const [k] of REFS) refText[k] = d.refText[k] || '';
+      for (const [k] of ALLREFS) refText[k] = d.refText[k] || '';
       document.querySelectorAll('[data-ref]').forEach(ta => { ta.value = refText[ta.dataset.ref]; });
       refTitles.clear(); (d.refTitles || []).forEach(([k, v]) => refTitles.set(k, v)); await saveText();
     }
@@ -1483,7 +1516,7 @@ $('expMenu').addEventListener('click', e => {
   applyLayout(await idb.get('__layout'));
   const rec = await idb.get('__text');
   if (rec) {
-    for (const [k] of REFS) refText[k] = rec[k] || '';
+    for (const [k] of ALLREFS) refText[k] = rec[k] || '';
     document.querySelectorAll('[data-ref]').forEach(ta => { ta.value = refText[ta.dataset.ref]; });
     (rec.titles || []).forEach(([k, v]) => refTitles.set(k, v));
   }
