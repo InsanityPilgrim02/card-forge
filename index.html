@@ -6,7 +6,7 @@
 <title>Card Forge · OPR</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14161a">
-<meta name="cf-build" content="2026-11-18.4">   <!-- bump on every release: the update check compares this against the server copy -->
+<meta name="cf-build" content="2026-11-20.1">   <!-- bump on every release: the update check compares this against the server copy -->
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -88,10 +88,22 @@ textarea{width:100%;min-height:80px;margin-top:6px;padding:8px;background:var(--
 .moves{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:1mm;margin-top:auto}   /* Firefight special movement rules: bottom right, just above the weapons */
 .moves+.weapons{margin-top:0}
 .stack .moves{flex-direction:column;align-items:flex-end}
+.stx{background:var(--cRuleBg);color:var(--cRuleFg);border:.25mm solid var(--cRuleBd);border-radius:2mm;padding:.5mm 1.2mm;font-size:calc(var(--fsRules)*.88);line-height:1.2}
+.stx b{font-weight:800}
+.hasb{display:flex;align-items:center;justify-content:space-between;gap:1.2mm}
+.chip.hb{display:inline-flex;align-items:center;gap:1.2mm}
+.tbs{display:inline-flex;gap:2px;flex:none}
+.fcg{display:inline-flex;align-items:center;gap:1.2mm;flex:none}
+.fc{font-size:calc(var(--fsWpn)*.8);text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+.dchk{-webkit-appearance:none;appearance:none;width:10px;height:10px;min-width:10px;min-height:10px;max-width:10px;max-height:10px;margin:0;padding:0;flex:none;border:1px solid currentColor;border-radius:2px;box-sizing:border-box;background:transparent;opacity:1}   /* whole pixels: fractional mm sizes got rounded differently per box, so the left one looked smaller */
+.dchk:checked{background:currentColor}
+.pwrap .dchk:not(:disabled){cursor:pointer}
+.ship .sec .fac{align-self:flex-start}
 .chip{background:var(--cRuleBg);color:var(--cRuleFg);border:.25mm solid var(--cRuleBd);border-radius:3mm;padding:.55mm 1.3mm;font-size:var(--fsRules);font-weight:650;line-height:1.2}
 .weapons{display:flex;flex-direction:column;gap:.6mm;margin-top:auto}
 .wpn{background:var(--cWpnBg);color:var(--cWpnFg);border:.25mm solid var(--cWpnBd);border-radius:3mm;padding:.45mm 1mm;font-size:var(--fsWpn);line-height:1.25;font-weight:550}
 .stats{display:flex;gap:1.2mm}
+.sg{flex:1;display:flex;gap:1.2mm}
 .stat{flex:1;text-align:center;background:var(--cStatBg);border:.25mm solid var(--cStatBd);border-radius:3mm;padding:.8mm .4mm .6mm}
 .stat b{display:block;font-size:1.6mm;text-transform:uppercase;letter-spacing:.04em;color:var(--cStatLb);line-height:1}
 .stat i{font-weight:800;font-size:4.2mm;line-height:1.05;font-style:normal;color:var(--cStatVl)}
@@ -156,10 +168,10 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
 .dice-stage .dres b{color:var(--amber);font-size:5mm}
 .dice-stage .drolls{margin-top:2mm;font-size:2.8mm;color:var(--mute);word-break:break-word}
 .pwrap.dead .card{filter:grayscale(1) brightness(.55)}
-.pwrap.dead::after,.pwrap.pinned::after{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-18deg);padding:6px 14px;border:4px solid;border-radius:8px;font:900 34px/1 Arial,sans-serif;letter-spacing:.1em;background:rgba(0,0,0,.6)}
+.pwrap.dead::after,.pwrap.pinned::after{pointer-events:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-18deg);padding:6px 14px;border:4px solid;border-radius:8px;font:900 34px/1 Arial,sans-serif;letter-spacing:.1em;background:rgba(0,0,0,.6)}
 .pwrap.dead::after{content:"DESTROYED";color:#e0443e}
 .pwrap.pinned::after{content:"PINNED";color:var(--amber)}
-.pnav{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:44px;height:84px;font-size:34px;padding:0;background:rgba(0,0,0,.6);color:#fff}
+.pnav{display:none!important;position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:44px;height:84px;font-size:34px;padding:0;background:rgba(0,0,0,.6);color:#fff}
 #pPrev{left:4px}#pNext{right:4px}
 .pnav:disabled{opacity:.15}
 #pTrack{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:6px;padding:8px 10px;background:var(--ink);border-top:1px solid var(--line);height:min(200px,36vh);overflow:hidden;flex:none}
@@ -272,6 +284,7 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
   </div></details>
   <details><summary>Reference cards</summary><div id="refs">
     <p class="hint">Format: <code>Name:description</code>, one rule per line. Cards update as you type. Click a card title to rename it. If you rename a rule on a unit card, update its name in the pasted text too so the two still match. In Faction Special Rules and Faction Spells, leave a blank line between factions: each faction gets its own cards and its own renamable title. Skills, Traits, Injuries and Talents work the same way but aren't split by faction; assign them to a unit from the flip side of its card.</p>
+    <div class="g" id="refToggles"></div>
   </div></details>
   <p class="hint" id="info"></p>
 </div>
@@ -307,6 +320,8 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
           <li>Open <b>Reference cards</b> and paste text into Core Special Rules, Faction Special Rules and Faction Spells. Write one rule per line as <code>Name:description</code>.</li>
           <li>In Faction Special Rules and Faction Spells, leave a <b>blank line between factions</b>. Each faction gets its own cards and its own title; click a title to rename it. Long lists split across cards automatically.</li>
           <li>Core Special Rules, Faction Special Rules and Faction Spells are kept in two collapsible sections: <b>Grimdark Future</b> and <b>Grimdark Future: Firefight</b> (which also has <b>Special Movement</b>). On Firefight unit cards, every unit always gets Falling, Pushing and Jumping (the list data doesn't include them), and any rule listed in Special Movement moves out of the main rules row. These sit at the bottom right, just above the weapons. Cards show the rules for the imported list's game system, picked automatically (Firefight lists use the Firefight boxes; anything else, or no list loaded, uses Grimdark Future).</li>
+          <li><b>Warfleets damage:</b> every system and weapon (not the turret, heroes or titles) has damage checkboxes: 2 each, or 4 for Armoured Plating. In Play mode, tick them on the card (each box is ticked on its own). A ship is DESTROYED when all of its systems and weapons are fully damaged. Every squadron has 2 damage checkboxes of its own. The bottom of each ship card has two speed boxes (Move, Cruise) and two defence boxes (Eva, Tou; both are X+ rolls). Each weapon line shows its facing (Front, Sides or Rear).</li>
+          <li><b>Warfleets</b> lists (game system <code>ftl</code>) load their ships as cards with Move, Cruise, Evade and Tough, the turret, weapons, and the title, hero and systems text from the list. Heroes, Titles and Systems are listed on the card front like campaign info. Their descriptions come only from the <b>Warfleets</b> section (Core Special Rules, Faction Special Rules, Heroes, Titles and Systems; all but Core can hold several factions, separated by a blank line). Costs like (+5pts) are hidden from the cards and popups, which also prints them as reference cards and fills the Play mode popups. Ships have no flip side.</li>
           <li>Reference cards can have images too, with the same sliders and Remove button.</li>
           <li>If you rename a rule on a unit card, change it in your pasted text as well so the Play mode popups still match. The pasted text is saved automatically.</li>
         </ul>
@@ -401,7 +416,9 @@ const GROUPS = [
 const REFS = [['core','Core Special Rules'],['faction','Faction Special Rules'],['spells','Faction Spells'],
   ['injuries','Injuries'],['talents','Talents'],['traits','Traits'],['skills','Skills']];
 const FFREFS = [['ff_core','Core Special Rules'],['ff_faction','Faction Special Rules'],['ff_spells','Faction Spells'],['ff_move','Special Movement']];
-const ALLREFS = [...REFS, ...FFREFS];   // everything that is saved, imported and exported
+const FTLREFS = [['ftl_core','Core Special Rules'],['ftl_faction','Faction Special Rules'],['ftl_heroes','Heroes'],['ftl_titles','Titles'],['ftl_systems','Systems']];   // Warfleets
+const FTLKIND = new Set(['core','faction','heroes','titles','systems']);
+const ALLREFS = [...REFS, ...FFREFS, ...FTLREFS];   // everything that is saved, imported and exported
 const FFKIND = new Set(['core','faction','spells','move']);   // reference kinds that exist once per game system
 const SINGLE = new Set(['core', 'move', 'skills', 'traits', 'injuries', 'talents']);   // one list each; faction/spells split into factions on blank lines
 const TR = [['o','Opacity',0,100],['x','Horiz',-50,50],['y','Vert',-50,50],['z','Zoom',50,250]];
@@ -409,15 +426,22 @@ const TR = [['o','Opacity',0,100],['x','Horiz',-50,50],['y','Vert',-50,50],['z',
 let army = null, listId = null;
 const bookNames = new Map();                          // armyId -> inferred faction name
 const ruleNames = new Map(), wpnNames = new Map();    // armyId::name -> custom name (per faction)
-const imgs = new Map(), qty = new Map(), names = new Map(), facs = new Map();
+const imgs = new Map(), defQty = new Map(), qty = new Map(), names = new Map(), facs = new Map();
 const extras = new Map(), flipped = new Set(), xps = new Map();   // xps: unit id -> XP set here (overrides the list's value)
 let cardOrder = [];   // unit ids in the order you dragged them   // extras: unit id -> { skills, traits, injuries, talents } added by hand; flipped: cards showing their back
 const refText = Object.fromEntries(ALLREFS.map(([k]) => [k, ''])), refTitles = new Map();   // refTitles key 'kind:blockIndex'
 // Game system for the reference cards is read from the imported list.
 const AUTO_FF = /firefight|^gff$/i;
-function isFF() { return AUTO_FF.test(String(army?.gameSystem || '')); }   // set automatically from the list: gameSystem "gf" = Grimdark Future, "gff" = Firefight
-const RT = k => refText[isFF() && FFKIND.has(k) ? 'ff_' + k : k] || '';   // the active system's text for core / faction / spells / move
-const rkey = (k, bi) => `${k}:${isFF() ? 'ff' : ''}${bi}`;               // card key; Firefight cards keep their own titles and images
+// The game system comes from the imported list's gameSystem: "gf" Grimdark Future, "gff" Firefight, "ftl" Warfleets
+const sysId = () => { const g = String(army?.gameSystem || ''); return /^ftl$/i.test(g) ? 'ftl' : AUTO_FF.test(g) ? 'gff' : 'gf'; };
+const isFF = () => sysId() === 'gff', isFTL = () => sysId() === 'ftl';
+const SYS_NAME = { gf: 'Grimdark Future', gff: 'Grimdark Future: Firefight', ftl: 'Warfleets' };
+const RT = k => {   // the active system's text for core / faction / spells / move
+  const g = sysId(), key = g === 'gff' ? (FFKIND.has(k) ? 'ff_' + k : k) : g === 'ftl' ? (FTLKIND.has(k) ? 'ftl_' + k : '') : k;
+  const t = key ? refText[key] || '' : '';
+  return g === 'ftl' ? t.replace(/\s*\(\s*\+?\s*\d+\s*(?:pts?|points?)\s*\)/gi, '') : t;   // Warfleets: costs like (+5pts) stay off the cards and popups
+};   // the active system's text for core / faction / spells / move
+const rkey = (k, bi) => `${k}:${{ gf: '', gff: 'ff', ftl: 'ft' }[sysId()]}${bi}`;               // card key; Firefight cards keep their own titles and images
 
 // ---------- storage (IndexedDB) ----------
 // keys: <unit name> image · ref:<kind>:<n> ref-card image · __text · __lists · __list:<id> · __state:<id>
@@ -456,10 +480,10 @@ const saveText = () => idb.set('__text', { ...refText, titles: [...refTitles] })
 const listKey = id => `__list:${id}`, stateKey = id => `__state:${id}`;
 const listIndex = async () => (await idb.get('__lists')) || [];
 const loadState = async id => (await idb.get(stateKey(id))) || (await idb.get(listKey(id)))?.state;   // older saves kept state inside the list
-const snapState = () => ({ wounds: [...play.wounds], pinned: [...play.pinned], playI: play.i,
+const snapState = () => ({ wounds: [...play.wounds], marks: [...play.marks], pinned: [...play.pinned], playI: play.i,
   names: [...names], facs: [...facs], qty: [...qty], ruleNames: [...ruleNames], wpnNames: [...wpnNames], extras: [...extras], xps: [...xps], order: cardOrder });
 function applyState(st = {}) {
-  play.wounds = new Map(st.wounds || []); play.pinned = new Set(st.pinned || []); play.i = st.playI || 0;
+  play.wounds = new Map(st.wounds || []); play.marks = new Map(st.marks || []); play.pinned = new Set(st.pinned || []); play.i = st.playI || 0;
   for (const [m, k] of [[names, 'names'], [facs, 'facs'], [qty, 'qty'], [ruleNames, 'ruleNames'], [wpnNames, 'wpnNames'], [extras, 'extras'], [xps, 'xps']]) { m.clear(); (st[k] || []).forEach(([a, b]) => m.set(a, b)); }
   flipped.clear(); cardOrder = st.order || [];
 }
@@ -480,7 +504,7 @@ async function restoreImgs(units) {
   return n;
 }
 async function applyList(entry, state, fromNet) {
-  listId = entry.id; army = entry.army; $('url').value = entry.url || entry.id;
+  listId = entry.id; army = normArmy(entry.army); $('url').value = entry.url || entry.id;
   for (const k of [...imgs.keys()]) if (!k.startsWith('ref:')) imgs.delete(k);   // keep reference-card images
   applyState(state || {});
   bookNames.clear();
@@ -488,7 +512,7 @@ async function applyList(entry, state, fromNet) {
   for (const u of army.units || []) if (u.armyId) (byArmy.get(u.armyId) || byArmy.set(u.armyId, []).get(u.armyId)).push(u);
   for (const [id, list] of byArmy) { const n = inferFaction(list); if (n) bookNames.set(id, n); }
   const restored = await restoreImgs(army.units || []);
-  status(`${fromNet ? 'Imported' : 'Restored'} “${army.name || listId}” · ${(army.units || []).length} units · ${army.listPoints ?? '?'} pts` +
+  status(`${fromNet ? 'Imported' : 'Restored'} “${army.name || listId}” · ${(army.units || []).length} ${isFTL() ? 'ships' : 'units'} · ${army.listPoints ?? '?'} pts` +
     (restored ? ` · ${restored} image${restored > 1 ? 's' : ''}` : '') +
     (state && ((state.wounds || []).length || (state.pinned || []).length) ? ' · play state restored' : ''), 'ok');
   await persistList(fromNet); render();
@@ -519,6 +543,7 @@ const refBox = ([k, t]) => `<label class="hint">${t}</label><textarea data-ref="
 $('refs').insertAdjacentHTML('beforeend',
   `<details><summary>Grimdark Future</summary><div>${REFS.slice(0, 3).map(refBox).join('')}</div></details>` +
   `<details><summary>Grimdark Future: Firefight</summary><div>${FFREFS.map(refBox).join('')}</div></details>` +
+  `<details><summary>Warfleets</summary><div>${FTLREFS.map(refBox).join('')}</div></details>` +
   `<details><summary>Campaign info</summary><div>${REFS.slice(3).map(refBox).join('')}</div></details>`);
 
 function applyVars() {
@@ -537,6 +562,20 @@ const rating = r => r.label || (r.rating != null ? `${r.name}(${r.rating})` : r.
 const isTough = l => /^tough(\s*\(|$)/i.test(l);
 const isHero = u => (u.rules || []).some(r => (r.name || '').toLowerCase() === 'hero');
 const sidOf = u => u.selectionId || u.id;
+const qtyOf = sid => qty.get(sid) ?? defQty.get(String(sid)) ?? 1;   // your own Play qty wins; squadrons default to their count
+// Warfleets lists have ships, not units. Each ship becomes a unit-like object (with the raw ship kept in .ship), so images,
+// quantity, reordering, Play mode and export all work on ships exactly as they do on units.
+function shipToUnit(sh) {
+  const wl = (sh.weapons || []).map(w => ({ id: w.id, name: w.name, type: 'ArmyBookWeapon', count: 1, range: Number(w.range) || 0, attacks: Number(w.attacks) || 0, weaponId: w.id,
+    label: `${w.name} (${w.range}\", A${w.attacks}, Str ${w.str}${(w.special || []).map(x => ', ' + x).join('')})` }));
+  const specials = [...new Set(sh.special || [])];   // the ship's own rules only; weapon rules (Overheating, Broadside…) stay on the weapon line
+  return { id: sh.id, selectionId: sh.selectionId || sh.id, name: sh.customName || sh.name, genericName: sh.name, size: 1,
+    totalCost: ((Number(sh.cost) || 0) + (Number(sh.title?.cost) || 0) + (Number(sh.hero?.cost) || 0)) * (sh.squadron ? 1 : (Number(sh.count) || 1)),   // a squadron's count is how many squadrons: one card, Play qty starts at the count
+    defQty: sh.squadron ? Math.max(1, Math.min(20, Number(sh.count) || 1)) : 1,
+    rules: specials.map(n => ({ name: n, label: n })), weapons: wl, loadout: wl, armyId: sh.fleetId, xp: sh.xp || 0, traits: sh.traits || [],
+    joinToUnit: null, combined: false, ship: sh };
+}
+const normArmy = d => { if (!Array.isArray(d.units) && Array.isArray(d.ships)) d.units = d.ships.map(shipToUnit); else if (Array.isArray(d.units)) d.units = d.units.map(u => u.ship ? shipToUnit(u.ship) : u); return d; };
 function toughOf(u) {
   const t = (u.rules || []).find(r => (r.name || '').toLowerCase() === 'tough');
   if (!t) return '–';
@@ -582,6 +621,12 @@ function mergeList(a, b, keyFn) {
   }
   return [...m.values()];
 }
+// Warfleets: two entries are the same ship/squadron only if everything on the card matches (class, stats, turret, hero, title, systems, weapons with facing, squadron size, xp).
+// Identical entries collapse into one card; raise Play qty on it for more copies. Differences here keep genuinely different ships and squadrons on their own cards.
+const shipKey = u => { const h = u.ship, nm = x => (x && (x.name || x.id)) || '';
+  return ['ftl', u.armyId, h.name, h.class, !!h.squadron, Number(h.count) || 1, h.move, h.cruise, h.evade, h.tough, h.range, h.att, h.str, nm(h.hero), nm(h.title),
+    (h.systems || []).map(nm).sort().join('|'), (h.special || []).slice().sort().join('|'),
+    (h.weapons || []).map(w => [w.name, w.range, w.attacks, w.str, w.facing, (w.special || []).join(',')].join(',')).join('|'), u.xp || 0, (h.traits || []).join('|')].join('::'); };
 function prepare(units) {
   const raw = units.map(u => ({ ...u })), bySid = new Map(raw.map(u => [sidOf(u), u])), gone = new Set(), merged = new Map();
   const wKey = e => (e.label || e.name || '') + '|' + (e.type || '');
@@ -596,7 +641,7 @@ function prepare(units) {
   }
   const seen = new Set();
   return raw.filter(u => !gone.has(sidOf(u))).map(u => merged.get(sidOf(u)) || u).filter(u => {
-    const k = [u.armyId, u.genericName || u.name, u.quality, u.defense, toughOf(u), u.size, costOf(u), rulesOf(u).sort().join('|'), weaponsOf(u).join('|'), u.xp || 0].join('::');
+    const k = u.ship ? shipKey(u) : [u.armyId, u.genericName || u.name, u.quality, u.defense, toughOf(u), u.size, costOf(u), rulesOf(u).sort().join('|'), weaponsOf(u).join('|'), u.xp || 0].join('::');
     return seen.has(k) ? false : (seen.add(k), true);
   });
 }
@@ -660,7 +705,7 @@ function demoWpn(label) {   // "Staff (A4, Spell Amplifier)" -> "Staff (A4)": ke
   const toks = []; let d = 0, cur = '';
   for (const ch of label.slice(i + 2, j)) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && !d) { toks.push(cur); cur = ''; } else cur += ch; }
   toks.push(cur);
-  const keep = toks.map(t => t.trim()).filter(t => t && (/^(\d+["”]?|A\d+)$/i.test(t) || demo.core.has(ruleBase(t).toLowerCase())));
+  const keep = toks.map(t => t.trim()).filter(t => t && (/^(\d+["”]?|A\d+|Str \d+)$/i.test(t) || demo.core.has(ruleBase(t).toLowerCase())));
   return keep.length ? label.slice(0, i + 2) + keep.join(', ') + label.slice(j) : label.slice(0, i);
 }
 function buildDemo() {
@@ -695,9 +740,45 @@ function rulesHtml(u, aid) {
   }
   return `<div class="rules">${all.filter(r => !isMv(r)).map(chip).join('')}</div>` + (moves.length ? `<div class="moves">${moves.map(chip).join('')}</div>` : '');
 }
+// Warfleets damage: every system and weapon (not the turret, heroes or titles) has checkboxes: 2 each, 4 for Armoured Plating.
+// The ship is destroyed when every one of them is fully damaged. Squadrons have no components, so they keep a Tough box.
+const DMG_PIPS = 2, PLATING = /armou?red plating/i;
+function shipCardHtml(u) {
+  const sh = u.ship, sid = sidOf(u), aid = armyKey(u), sq = !!sh.squadron, n = sq ? 1 : (Number(sh.count) || 1);
+  const kind = [sh.class || (sq ? 'Squadron' : 'Ship'), sh.slots != null ? `${sh.slots} slots` : ''].filter(Boolean).join(' · ');
+  const comps = [];   // systems and weapons, in card order
+  const boxes = (name, t, counts) => {
+    const c = comps.push({ n: name, t, c: counts ? 1 : 0 }) - 1;
+    return `<span class="tbs">${Array.from({ length: t }, (_, k) => `<input type="checkbox" class="dchk" data-c="${c}" data-k="${k}" disabled aria-label="${esc(name)} damage ${k + 1}">`).join('')}</span>`;
+  };
+  const pips = o => PLATING.test(o.name) ? 4 : DMG_PIPS;
+  const chip = (k, o, bx) => `<span class="chip${bx ? ' hb' : ''}" data-kind="${k}" data-name="${esc(o.name)}"><span>${esc(o.name)}</span>${bx ? boxes(o.name, pips(o), true) : ''}</span>`;
+  const sec = (k, label, items, bx) => items.length ? `<div class="sec"><div class="fac">${label}</div><div class="rules">${items.map(o => chip(k, o, bx)).join('')}</div></div>` : '';
+  const secs = sec('heroes', 'Heroes', [sh.hero].filter(Boolean), false) + sec('titles', 'Titles', [sh.title].filter(Boolean), false) + sec('systems', 'Systems', sh.systems || [], true);
+  const FACING = ['Front', 'Sides', 'Rear'];   // the list's facing number; 1 = sides is confirmed by Broadside, 2 = rear is assumed
+  const wl = (u.loadout || []).map((w, i) => { const f = FACING[sh.weapons?.[i]?.facing];
+    return `<div class="wpn hasb"><span>${esc(demoWpn(w.label))}</span><span class="fcg">${f ? `<b class="fc">${f}</b>` : ''}${boxes(w.name, DMG_PIPS, true)}</span></div>`; }).join('');
+  const sqBox = sq ? `<div class="wpn hasb"><span>Damage</span>${boxes(sh.name, DMG_PIPS, true)}</div>` : '';   // a squadron has no weapons or systems: it takes 2 damage itself
+  const tracked = comps.some(c => c.c), turret = `Turret (${sh.range}", A${sh.att}, Str ${sh.str})`;
+  const grp = [[['Move', sh.move + '"'], ['Cruise', sh.cruise + '"']], [['Eva', sh.evade + '+'], ['Tou', sh.tough + '+']]];   // speed boxes, then Eva and Tou (both are roll-to-beat values, as in the rulebook)
+  return `<article class="card front ship" data-sid="${esc(sid)}" data-aid="${esc(aid)}" data-qty="${qtyOf(sid)}" data-n="1" data-t="${tracked ? 0 : esc(sh.tough ?? 0)}"${comps.length ? ` data-comps="${esc(JSON.stringify(comps))}"` : ''} style="${tVars(imgs.get(sid)?.t)}">
+    <div class="body">
+      ${artHtml(imgs.get(sid))}
+      <div class="ov${$('stack').checked ? ' stack' : ''}">
+        <div class="namebox"><div class="nm"><span class="ed" data-nm>${esc(nameOf(u))}</span>${n > 1 ? ` ×${n}` : ''}</div><div>${costOf(u)}pts</div></div>
+        <div class="fac">${esc(kind)}</div>
+        <div class="rules">${rulesOf(u).filter(demoRule).map(r => `<span class="chip ed" data-rule="${esc(r)}">${esc(ruleDisp(r, aid))}</span>`).join('')}</div>
+        ${secs}
+        <div class="weapons"><div class="wpn"><span>${esc(turret)}</span></div>${wl}${sqBox}</div>
+        <div class="stats">${grp.map(g => `<div class="sg">${g.map(([l, v]) => `<div class="stat"><b>${l}</b><i>${esc(v)}</i></div>`).join('')}</div>`).join('')}</div>
+      </div>
+      ${IMG_UI}
+    </div></article>`;
+}
 function cardHtml(u) {
+  if (u.ship) return shipCardHtml(u);
   const sid = sidOf(u), aid = armyKey(u), q = u.quality != null ? u.quality + '+' : '–', d = u.defense != null ? u.defense + '+' : '–';
-  return `<article class="card front" data-sid="${esc(sid)}" data-aid="${esc(aid)}" data-qty="${qty.get(sid) || 1}" data-n="${u.size || 1}" data-t="${esc(toughOf(u))}" style="${tVars(imgs.get(sid)?.t)}">
+  return `<article class="card front" data-sid="${esc(sid)}" data-aid="${esc(aid)}" data-qty="${qtyOf(sid)}" data-n="${u.size || 1}" data-t="${esc(toughOf(u))}" style="${tVars(imgs.get(sid)?.t)}">
     <div class="body">
       ${artHtml(imgs.get(sid))}
       <div class="ov${$('stack').checked ? ' stack' : ''}">
@@ -712,7 +793,7 @@ function cardHtml(u) {
 }
 function ctlHtml(sid, isUnit) {   // unit cards: qty + image tools; reference cards: image tools once an image is set
   const im = imgs.get(sid); if (!isUnit && !im) return '';
-  return `<div class="ctl"><div>${isUnit ? `<span>Play qty</span><input type="number" min="1" max="20" value="${qty.get(sid) || 1}" data-q>` : '<span>Image</span>'}${im ? '<button data-rm class="rm">Remove saved image</button>' : ''}</div>` +
+  return `<div class="ctl"><div>${isUnit ? `<span>Play qty</span><input type="number" min="1" max="20" value="${qtyOf(sid)}" data-q>` : '<span>Image</span>'}${im ? '<button data-rm class="rm">Remove saved image</button>' : ''}</div>` +
     (im ? TR.map(([k, l, mn, mx]) => `<div><span>${l}</span><input type="range" min="${mn}" max="${mx}" value="${im.t[k]}" data-tr="${k}"></div>`).join('') : '') + '</div>';
 }
 
@@ -729,6 +810,7 @@ function campOf(u = {}) {   // only what was added by hand; nothing is imported 
 }
 const hasCamp = u => { const c = campOf(u); return c.xp > 0 || sectionsFor(u).some(([k]) => c[k].length); };   // drives the "!" and whether the back prints
 function backHtml(u, forPrint) {
+  if (u.ship) return '';   // ships have no campaign flip side
   const sid = sidOf(u), c = campOf(u), ex = extras.get(String(sid)) || {};
   const secs = sectionsFor(u).map(([k, label]) => `<div class="sec${c[k].length ? '' : ' none'}"><div class="fac">${label}</div>
         <div class="rules">${c[k].map(n => `<span class="chip" data-kind="${k}" data-name="${esc(n)}">${esc(n)}${!forPrint && (ex[k] || []).includes(n) ? `<span class="rmx" data-rmx="${k}" data-name="${esc(n)}">×</span>` : ''}</span>`).join('')}</div>
@@ -849,8 +931,9 @@ function paginate(entries, title, spells) {
 }
 function refCards() {
   let html = '', n = 0;
-  const ff = isFF(), order = [...REFS.slice(0, 3), ...(ff ? [['move', 'Special Movement']] : []), ...REFS.slice(3)];
+  const g = sysId(), order = g === 'ftl' ? FTLREFS.map(([k, t]) => [k.slice(4), t]) : [...REFS.slice(0, 3), ...(g === 'gff' ? [['move', 'Special Movement']] : []), ...REFS.slice(3)];
   for (const [k, base] of order) {
+    if (REFHIDE.has(k)) continue;
     const txt = RT(k), blocks = SINGLE.has(k) ? [parseRules(txt)] : blocksOf(txt);
     blocks.forEach((all, bi) => {
       const entries = all.filter(e => !demoDrops(k, e)); if (!entries.length) return;
@@ -883,14 +966,14 @@ function render() {
     units = units.map((u, i) => [u, pos.has(String(sidOf(u))) ? pos.get(String(sidOf(u))) : 1e6 + i]).sort((x, y) => x[1] - y[1]).map(x => x[0]);
   }
   for (const u of units) {
-    const q = qty.get(sidOf(u)) || 1; unique++; printed += q;
+    defQty.set(String(sidOf(u)), u.defQty || 1); const q = qtyOf(sidOf(u)); unique++; printed += q;
     html += unitHtml(u);
     for (let i = 1; i < q; i++) html += `<div class="print-only">${cardHtml(u)}${backHtml(u, true)}</div>`;
   }
   const r = refCards();
   $('grid').innerHTML = html + r.html + ($('cardBacks').checked ? `<div class="shell gbshell">${gbackHtml()}${ctlHtml(GB, false)}</div>` : '');
   $('export').disabled = $('playBtn').disabled = !(printed + r.n);
-  $('info').textContent = [unique && `${unique} unit cards`, printed > unique && `${printed} printed`, r.n && `${r.n} reference cards`, army && `${isFF() ? 'Grimdark Future: Firefight' : 'Grimdark Future'} rules`].filter(Boolean).join(' · ');
+  $('info').textContent = [unique && `${unique} ${isFTL() ? 'ship' : 'unit'} cards`, printed > unique && `${printed} printed`, r.n && `${r.n} reference cards`, army && `${SYS_NAME[sysId()]} rules`].filter(Boolean).join(' · ');
   attachCamera();
 }
 
@@ -998,14 +1081,26 @@ document.querySelectorAll('[data-ref]').forEach(ta => ta.addEventListener('input
 const layoutIds = [...FIELDS, ...COLORS].map(f => f[0]);
 let _layT;
 const layoutData = () => ({ ...Object.fromEntries(layoutIds.map(id => [id, $(id).value])), bord: $('bord').checked, stack: $('stack').checked,
-  noCardBg: $('noCardBg').checked, noRefBody: $('noRefBody').checked, cardBacks: $('cardBacks').checked, demoMode: $('demoMode').checked });
+  noCardBg: $('noCardBg').checked, noRefBody: $('noRefBody').checked, cardBacks: $('cardBacks').checked, demoMode: $('demoMode').checked, refHide: [...REFHIDE] });
 const saveLayout = () => { clearTimeout(_layT); _layT = setTimeout(() => idb.set('__layout', layoutData()), 300); };
 function applyLayout(lay) {
   if (!lay) return;
   for (const id of layoutIds) if (lay[id] != null && $(id)) $(id).value = lay[id];
   $('bord').checked = !!lay.bord; $('stack').checked = !!lay.stack; $('noCardBg').checked = !!lay.noCardBg; $('noRefBody').checked = !!lay.noRefBody; $('cardBacks').checked = !!lay.cardBacks; $('demoMode').checked = !!lay.demoMode;
+  REFHIDE.clear(); (lay.refHide || []).forEach(k => REFHIDE.add(k)); if (typeof syncRefToggles === 'function') syncRefToggles();
 }
 const layoutChanged = () => { saveLayout(); render(); };
+const REFHIDE = new Set();   // reference-card kinds switched off: not shown, not printed, not in Play or exports (their text is still kept as lookup data)
+const REFKINDS = [['All', [['core','Core Special Rules'],['faction','Faction Special Rules'],['spells','Faction Spells']]],
+  ['Firefight', [['move','Special Movement']]],
+  ['Warfleets', [['heroes','Heroes'],['titles','Titles'],['systems','Systems']]],
+  ['Campaign info', [['injuries','Injuries'],['talents','Talents'],['traits','Traits'],['skills','Skills']]]];
+$('refToggles').innerHTML = '<span class="gl">Show these reference card types</span>' +
+  REFKINDS.map(([g, ks]) => `<div class="row" style="margin-bottom:4px"><label style="min-width:9em;color:var(--amber)">${g}</label>${ks.map(([k, t]) => `<label><input type="checkbox" data-refshow="${k}" checked> ${t}</label>`).join('')}</div>`).join('') ;
+const syncRefToggles = () => document.querySelectorAll('[data-refshow]').forEach(cb => { cb.checked = !REFHIDE.has(cb.dataset.refshow); });
+document.querySelectorAll('[data-refshow]').forEach(cb => cb.addEventListener('change', () => {
+  cb.checked ? REFHIDE.delete(cb.dataset.refshow) : REFHIDE.add(cb.dataset.refshow); layoutChanged();
+}));
 ['sizes', 'stack', 'bord', 'noCardBg', 'noRefBody', 'cardBacks', 'demoMode'].forEach(id => $(id).addEventListener('change', layoutChanged));
 $('demoMode').addEventListener('change', () => { if ($('demoMode').checked && demo.noCore) status('Demo mode needs the Core Special Rules pasted into the reference cards (or a loaded list) so it knows which rules are core. Nothing was hidden.', 'err'); });
 $('sizes').addEventListener('input', e => { if (e.target?.type === 'color') layoutChanged(); });
@@ -1023,7 +1118,8 @@ async function load() {
     const res = await fetch(`${API}?id=${encodeURIComponent(id)}`);
     if (!res.ok) throw new Error(`Couldn’t load list (${res.status}). Is it shared via “Share as Link”?`);
     const data = await res.json();
-    if (!Array.isArray(data.units)) throw new Error('Unexpected response — the list may be empty or private.');
+    if (!Array.isArray(data.units) && !Array.isArray(data.ships)) throw new Error('Unexpected response — the list may be empty or private.');
+    normArmy(data);
     await applyList({ id, url: v || id, army: data }, await loadState(id), true);   // re-importing refreshes the data but keeps play state
   } catch (err) {
     army = null; listId = null; status(err.message.startsWith('Failed') ? 'Network error contacting Army Forge.' : err.message, 'err'); render();
@@ -1123,10 +1219,12 @@ $('wipe').onclick = async () => {
 };
 
 // ---------- play mode: one big card, swipe/arrows/contents, per-model toughness, pin, dice, spells, rule popups ----------
-const play = { on: false, i: 0, list: [], wounds: new Map(), pinned: new Set(), flipped: new Set(), lookup: new Map(), refOpen: false, back: null, dice: null };
-const modelsOf = it => play.wounds.get(it.sid) || Array(it.n).fill(0);   // wounds lost per model
-const aliveOf = it => modelsOf(it).filter(l => l < it.max).length;
-const isDestroyed = it => it.max > 0 && aliveOf(it) === 0;   // every model out of wounds (units without Tough aren't tracked)
+const play = { on: false, i: 0, list: [], wounds: new Map(), marks: new Map(), pinned: new Set(), flipped: new Set(), lookup: new Map(), refOpen: false, back: null, dice: null };
+const capOf = (it, m) => it.comps ? it.comps[m].max : it.max;   // Warfleets ships track each weapon/system; units track each model
+const modelsOf = it => play.wounds.get(it.sid) || Array(it.comps ? it.comps.length : it.n).fill(0);   // damage taken per model / component
+const compTotal = it => it.comps.filter(c => c.counts).length;   // ships: only weapons and systems count
+const aliveOf = it => it.comps ? modelsOf(it).filter((l, m) => it.comps[m]?.counts && l < capOf(it, m)).length : modelsOf(it).filter((l, m) => l < capOf(it, m)).length;
+const isDestroyed = it => (it.comps ? compTotal(it) > 0 : it.max > 0) && aliveOf(it) === 0;   // every model out of wounds (units without Tough aren't tracked)
 const isPrimary = x => x.ref || x.copy === 1;   // extra copies of a unit are reached with the Unit 1/2/… buttons
 // controls follow the unit even while its spell card is on the stage
 const unitIdx = () => { const b = play.list[play.back]; return b && !b.ref ? play.back : play.i; };
@@ -1134,6 +1232,7 @@ function buildLookup() {
   const m = new Map(), add = e => { const k = ruleBase(e.name).toLowerCase(); if (k && !m.has(k)) m.set(k, e); };
   blocksOf(RT('faction')).flat().forEach(add); blocksOf(RT('spells')).flat().forEach(add); parseRules(RT('core')).forEach(add); parseRules(RT('move')).forEach(add);
   for (const [k] of SECTIONS) parseRules(refText[k]).forEach(e => { const key = kindKey(k, e.name); if (!m.has(key)) m.set(key, e); });
+  if (isFTL()) for (const k of ['heroes', 'titles', 'systems']) blocksOf(RT(k)).flat().forEach(e => { const key = kindKey(k, e.name); if (!m.has(key)) m.set(key, e); });   // Warfleets: pasted lists only
   return m;
 }
 function openPlay() {
@@ -1143,6 +1242,7 @@ function openPlay() {
     const caster = !ref && [...c.querySelectorAll('.chip')].some(ch => ruleBase(ch.dataset.rule || ch.textContent).toLowerCase() === 'caster');
     const label = (c.querySelector('.nm .ed') || c.querySelector('.top .ed'))?.textContent || 'Card';
     return Array.from({ length: q }, (_, i) => ({ el: c, ref, caster, rk: c.dataset.rk || '', title: c.querySelector('[data-cur]')?.dataset.cur || '',
+      comps: !ref && c.dataset.comps ? JSON.parse(c.dataset.comps).map(x => ({ name: x.n, max: x.t, counts: !!x.c })) : null,
       back: c.closest('.shell')?.querySelector(':scope > .card.back') || null, aid: c.dataset.aid || '', fac: c.querySelector('.fac')?.textContent || '', baseSid: c.dataset.sid || '', copy: i + 1, copies: q,
       sid: ref ? null : `${c.dataset.sid}#${i}`, n: ref ? 0 : Number(c.dataset.n) || 1, max: ref ? 0 : Number(c.dataset.t) || 0,   // max 0 = no Tough, nothing to track
       name: q > 1 ? `${label} (${i + 1}/${q})` : label }));
@@ -1194,14 +1294,15 @@ function linkRules(root, hint = '') {
     if (shown.toLowerCase() !== ruleBase(L.get(k).name).toLowerCase()) ch.dataset.alias = shown;
   });
   root.querySelectorAll('.wpn').forEach(w => {
-    const txt = w.textContent, i = txt.indexOf(' ('), j = txt.lastIndexOf(')'); if (i < 0 || j < i) return;
+    const txt = (w.querySelector(':scope > span') || w).textContent, i = txt.indexOf(' ('), j = txt.lastIndexOf(')'); if (i < 0 || j < i) return;
     const toks = []; let d = 0, cur = '';
     for (const c of txt.slice(i + 2, j)) {
       if (c === '(') d++; if (c === ')') d--;
       if (c === ',' && d === 0) { toks.push(cur); cur = ''; } else cur += c;
     }
     toks.push(cur);
-    w.innerHTML = esc(txt.slice(0, i + 2)) + toks.map(t => { const k = ruleBase(t).toLowerCase();
+    const tgt = w.querySelector(':scope > span') || w;   // ship weapons keep their checkboxes beside the text
+    tgt.innerHTML = esc(txt.slice(0, i + 2)) + toks.map(t => { const k = ruleBase(t).toLowerCase();
       return L.has(k) ? `<span class="wr" data-tip="${esc(k)}">${esc(t.trim())}</span>` : esc(t.trim()); }).join(', ') + esc(txt.slice(j));
   });
 }
@@ -1223,9 +1324,11 @@ function showPlay() {
   if (play.dice && !unit.ref) { wrap.className = 'pwrap'; wrap.innerHTML = diceCardHtml(); }
   else {
     const clone = (play.flipped.has(view.baseSid) && view.back ? view.back : view.el).cloneNode(true);
-    clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,.addx,.rmx,input').forEach(e => e.remove());
+    clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,.addx,.rmx,input:not(.dchk)').forEach(e => e.remove());
     clone.querySelectorAll('.ed').forEach(e => e.classList.remove('ed'));
     linkRules(clone, unit.ref ? '' : unit.fac);
+    if (view.comps) { const d = modelsOf(view), mk = play.marks.get(view.sid); clone.querySelectorAll('.dchk').forEach(b => { const c = +b.dataset.c, k = +b.dataset.k; b.disabled = false;
+      b.checked = mk && mk[c] != null ? !!((mk[c] >> k) & 1) : k < (d[c] || 0); }); }   // each box is its own: tick any one; older saves (counts only) fill from the left
     wrap.className = 'pwrap' + (isDestroyed(view) ? ' dead' : play.pinned.has(view.sid) ? ' pinned' : ''); wrap.appendChild(clone);
   }
   $('pStage').replaceChildren(wrap);
@@ -1275,15 +1378,15 @@ function renderTrack() {
   }
   const keep = t.querySelector('.pbody')?.scrollTop || 0;
   let rows = '', head = '';
-  if (it.max) {   // only units with Tough get wound tracking, one box per model
-    rows = modelsOf(it).map((l, m) => {
-      const left = it.max - l;
-      return `<div class="mdl${left < 1 ? ' gone' : ''}"><span>M${m + 1}</span>
-        <div class="pips">${Array.from({ length: it.max }, (_, k) => `<i class="${k < left ? 'on' : ''}"></i>`).join('')}</div>
+  if (it.max || it.comps) {   // only units with Tough (or ships with weapons/systems) get wound tracking, one row per model; ships use the checkboxes on the card
+    rows = it.comps ? '' : modelsOf(it).map((l, m) => {
+      const cap = capOf(it, m), left = cap - l;
+      return `<div class="mdl${left < 1 ? ' gone' : ''}"><span>${it.comps ? esc(it.comps[m].name) : 'M' + (m + 1)}</span>
+        <div class="pips">${Array.from({ length: cap }, (_, k) => `<i class="${k < left ? 'on' : ''}"></i>`).join('')}</div>
         <button data-a="wound" data-m="${m}" ${left < 1 ? 'disabled' : ''}>−</button>
         <button data-a="heal" data-m="${m}" ${l < 1 ? 'disabled' : ''}>+</button></div>`;
     }).join('');
-    head = `<b class="${aliveOf(it) < 1 ? 'out' : ''}">Models ${aliveOf(it)} / ${it.n} · Tough ${it.max} each</b>`;
+    head = it.comps ? `<b class="${aliveOf(it) < 1 ? 'out' : ''}">Weapons &amp; systems working ${aliveOf(it)} / ${compTotal(it)}</b><span class="pmute">Tick the boxes on the card to mark damage</span>` : `<b class="${aliveOf(it) < 1 ? 'out' : ''}">Models ${aliveOf(it)} / ${it.n} · Tough ${it.max} each</b>`;
   }
   t.innerHTML = `<div class="pbody">${unitNav}${head}${rows ? `<div class="mdls">${rows}</div>` : ''}${play.dice ? '<span class="pmute">Dice on card — tap Dice to return</span>' : spellOn ? '<span class="pmute">Spell list on card — tap Spells to return</span>' : ''}</div>${pbot}`;
   const body = t.querySelector('.pbody'); if (body) body.scrollTop = keep;
@@ -1292,7 +1395,7 @@ function renderToc() {
   let nu = 0, nr = 0;
   const row = (it, k) => {
     const dead = isDestroyed(it), pin = play.pinned.has(it.sid), num = it.ref ? ++nr : ++nu;
-    const info = dead ? 'destroyed' : pin ? 'pinned' : !it.max ? '' : it.n > 1 ? `${aliveOf(it)}/${it.n} models` : `${it.max - modelsOf(it)[0]}/${it.max}`;
+    const info = dead ? 'destroyed' : pin ? 'pinned' : it.comps ? `${aliveOf(it)}/${compTotal(it)} working` : !it.max ? '' : it.n > 1 ? `${aliveOf(it)}/${it.n} models` : `${it.max - modelsOf(it)[0]}/${it.max}`;
     return `<button data-k="${k}" class="${k === play.i ? 'cur' : ''}${dead ? ' x' : ''}"><span>${num}</span><em>${esc(it.name)}</em><small>${info}</small></button>`;
   };
   const units = play.list.map((it, k) => it.ref ? '' : row(it, k)).join(''), refs = play.list.map((it, k) => it.ref ? row(it, k) : '').join(''), nRef = play.list.filter(x => x.ref).length;
@@ -1351,7 +1454,7 @@ $('pPrev').onclick = () => go(-1); $('pNext').onclick = () => go(1);
 $('pToc').onclick = e => {
   const b = e.target.closest('[data-k]'); if (!b) return;
   if (b.dataset.k === 'refs') { play.refOpen = !play.refOpen; return renderToc(); }
-  if (b.dataset.k === 'reset') { play.wounds.clear(); play.pinned.clear(); savePlaySoon(); }
+  if (b.dataset.k === 'reset') { play.wounds.clear(); play.marks.clear(); play.pinned.clear(); savePlaySoon(); }
   else { play.i = +b.dataset.k; play.back = null; $('pToc').hidden = true; }
   showPlay();
 };
@@ -1375,12 +1478,20 @@ $('pTrack').onclick = e => {
   if (it.ref) return;
   if (a === 'pin') { play.pinned.has(it.sid) ? play.pinned.delete(it.sid) : play.pinned.add(it.sid); savePlaySoon(); return showPlay(); }
   const arr = [...modelsOf(it)], m = +btn.dataset.m;
-  arr[m] = a === 'wound' ? Math.min(it.max, arr[m] + 1) : Math.max(0, arr[m] - 1);
+  arr[m] = a === 'wound' ? Math.min(capOf(it, m), arr[m] + 1) : Math.max(0, arr[m] - 1);
   const was = isDestroyed(it);
   play.wounds.set(it.sid, arr); savePlaySoon();
   if (was !== isDestroyed(it)) return showPlay();   // DESTROYED stamp on/off
   renderTrack(); renderToc();
 };
+$('pStage').addEventListener('change', e => {   // ticking a damage box marks just that box; the count of ticked boxes is what decides DESTROYED
+  const cb = e.target.closest?.('.dchk'), it = play.list[play.i]; if (!cb || !it?.comps) return;
+  const masks = it.comps.map((_, i) => [...$('pStage').querySelectorAll(`.dchk[data-c="${i}"]`)].reduce((m, x) => x.checked ? m | (1 << +x.dataset.k) : m, 0));
+  const arr = masks.map(m => m.toString(2).replace(/0/g, '').length), was = isDestroyed(it);
+  play.marks.set(it.sid, masks); play.wounds.set(it.sid, arr); savePlaySoon();
+  if (was !== isDestroyed(it)) return showPlay();   // DESTROYED stamp on/off
+  renderTrack(); renderToc();
+});
 let tx = 0, ty = 0;
 $('pStage').addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
 $('pStage').addEventListener('touchend', e => {
@@ -1417,7 +1528,7 @@ function makeZip(files) {
 }
 async function cardPng(card, css, vars, size = card) {   // size: an on-screen card to measure (a hidden back has no size of its own)
   const W = size.offsetWidth, H = size.offsetHeight, S = 300 / 96, clone = card.cloneNode(true);
-  clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,.flip,.flag,.addx,.rmx,.xp button,input').forEach(e => e.remove());
+  clone.querySelectorAll('.tool,.imgmenu,.camfeed,.cambar,.flip,.flag,.addx,.rmx,.xp button,input:not(.dchk)').forEach(e => e.remove());
   const wrap = document.createElement('div');
   wrap.className = 'xw' + (document.body.classList.contains('bordered') ? ' bordered' : '');
   wrap.setAttribute('style', vars); wrap.appendChild(clone);
@@ -1473,7 +1584,8 @@ async function importJson(file) {
     }
     for (const [k, v] of d.refImages || []) if (v?.src) { imgs.set(k, mk(v)); await idb.set(k, imgs.get(k)); }
     if (d.layout) { applyLayout(d.layout); saveLayout(); }
-    if (d.army && Array.isArray(d.army.units)) {
+    if (d.army && (Array.isArray(d.army.units) || Array.isArray(d.army.ships))) {
+      normArmy(d.army);
       const id = d.listId || 'json-' + hash((d.army.name || '') + Date.now());
       await applyList({ id, url: d.url || id, army: d.army }, d.state || {}, true);
       for (const [k, v] of d.images || []) if (v?.src) { imgs.set(k, mk(v)); await saveImgFor(String(k)); }
