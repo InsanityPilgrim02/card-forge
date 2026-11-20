@@ -171,9 +171,6 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
 .pwrap.dead::after,.pwrap.pinned::after{pointer-events:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-18deg);padding:6px 14px;border:4px solid;border-radius:8px;font:900 34px/1 Arial,sans-serif;letter-spacing:.1em;background:rgba(0,0,0,.6)}
 .pwrap.dead::after{content:"DESTROYED";color:#e0443e}
 .pwrap.pinned::after{content:"PINNED";color:var(--amber)}
-.pnav{display:none!important;position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:44px;height:84px;font-size:34px;padding:0;background:rgba(0,0,0,.6);color:#fff}
-#pPrev{left:4px}#pNext{right:4px}
-.pnav:disabled{opacity:.15}
 #pTrack{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:6px;padding:8px 10px;background:var(--ink);border-top:1px solid var(--line);height:min(200px,36vh);overflow:hidden;flex:none}
 #pTrack .pbody{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:4px 2px}
 #pTrack .pbot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;column-gap:8px;width:100%;flex:none}
@@ -340,7 +337,7 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
 
         <h3>Play mode</h3>
         <ul>
-          <li><b>▶ Play</b> shows one card at a time. Swipe, use the side arrows or the ← → keys. <b>☰ Cards</b> opens the contents list, with the reference cards in a dropdown. <b>Exit</b> or Esc leaves.</li>
+          <li><b>▶ Play</b> shows one card at a time. Swipe or use the ← → keys. <b>☰ Cards</b> opens the contents list, with the reference cards in a dropdown. <b>Exit</b> or Esc leaves.</li>
           <li><b>Wounds:</b> units with Tough get a − / + box per model. When every model is out of wounds, a red <b>DESTROYED</b> stamp appears; healing removes it. Units without Tough aren't tracked.</li>
           <li><b>Pin / Unpin</b> puts a PINNED stamp on a unit.</li>
           <li>Several copies (Play qty above 1) get their own tracking, with Unit 1, Unit 2… buttons to switch.</li>
@@ -378,8 +375,6 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
   <div class="pbar"><button id="pList">☰ Cards</button><span id="pPos"></span><button id="pClose">✕ Exit</button></div>
   <aside id="pToc" hidden></aside>
   <div id="pStage"></div>
-  <button class="pnav" id="pPrev" aria-label="Previous card">‹</button>
-  <button class="pnav" id="pNext" aria-label="Next card">›</button>
   <div id="pTrack"></div>
   <div id="pTip" hidden></div>
 </div>
@@ -1336,14 +1331,12 @@ function showPlay() {
   const grp = play.list.map((x, k) => x.ref === unit.ref && isPrimary(x) ? k : -1).filter(k => k >= 0);
   const pos = unit.ref ? grp.indexOf(ui) : grp.findIndex(k => play.list[k].baseSid === unit.baseSid);
   $('pPos').textContent = play.dice ? `Dice · ${unit.name}` : `${unit.ref ? 'Ref ' : ''}${pos + 1} / ${grp.length} · ${unit.name}`;
-  $('pPrev').disabled = play.dice || pos <= 0;
-  $('pNext').disabled = play.dice || pos < 0 || pos >= grp.length - 1;
 }
 function fitPlay() {
   const st = $('pStage'), w = st.firstChild; if (!w) return;
   const c = w.firstChild, W = c.offsetWidth, H = c.offsetHeight;
   w.style.width = W + 'px'; w.style.height = H + 'px';
-  w.style.transform = `translate(-50%,-50%) scale(${Math.max(.3, Math.min((st.clientWidth - 100) / W, (st.clientHeight - 16) / H))})`;
+  w.style.transform = `translate(-50%,-50%) scale(${Math.max(.3, Math.min((st.clientWidth - 12) / W, (st.clientHeight - 16) / H))})`;
 }
 const spellBlocks = () => {
   const seen = new Set(), out = [];
@@ -1450,7 +1443,6 @@ $('pStage').addEventListener('change', e => { if (play.dice && e.target.matches(
 
 $('playBtn').onclick = openPlay; $('pClose').onclick = closePlay;
 $('pList').onclick = () => { if (play.list[play.i].ref) play.refOpen = true; renderToc(); $('pToc').hidden = !$('pToc').hidden; };
-$('pPrev').onclick = () => go(-1); $('pNext').onclick = () => go(1);
 $('pToc').onclick = e => {
   const b = e.target.closest('[data-k]'); if (!b) return;
   if (b.dataset.k === 'refs') { play.refOpen = !play.refOpen; return renderToc(); }
