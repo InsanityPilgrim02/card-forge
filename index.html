@@ -6,7 +6,7 @@
 <title>Card Forge · OPR</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14161a">
-<meta name="cf-build" content="2026-11-20.3">   <!-- bump on every release: the update check compares this against the server copy -->
+<meta name="cf-build" content="2026-11-20.14">   <!-- bump on every release: the update check compares this against the server copy -->
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -63,6 +63,7 @@ details>div{padding:4px 12px 12px}
 .row input[type=color]{width:2.2em;height:1.55em;margin-left:4px;padding:0;border:1px solid var(--line);border-radius:3px;background:var(--ink);cursor:pointer}
 .g{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}.g:first-child{margin-top:0;padding-top:0;border-top:0}
 .gl{display:block;font:700 11px/1 system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin:0 0 6px}
+textarea+.gl{margin-top:14px}
 textarea{width:100%;min-height:80px;margin-top:6px;padding:8px;background:var(--ink);color:#fff;border:1px solid var(--line);border-radius:4px;font:12px/1.35 ui-monospace,Consolas,monospace}
 .hint{font-size:12px;color:var(--mute);margin:4px 0}
 #grid{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;align-items:flex-start;padding:10px 12px 50px}
@@ -196,15 +197,16 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
 #pToc .rhd{justify-content:space-between;background:#333}
 #pToc .rst{background:#444;justify-content:center;margin-top:6px}
 .rl,.wr{cursor:help}.wr{border-bottom:.2mm dotted #333}
-#pTip{position:fixed;z-index:120;max-width:min(340px,90vw);background:#fff;color:#111;border-radius:8px;padding:8px 11px;box-shadow:0 6px 24px rgba(0,0,0,.6);pointer-events:none;font-size:13px;line-height:1.35}
-#pTip b{display:block;margin-bottom:2px}#pTip p{margin:0}
+.ptip{position:fixed;z-index:120;max-width:min(340px,90vw);max-height:60vh;overflow:auto;background:#fff;color:#111;border-radius:8px;padding:8px 11px;box-shadow:0 6px 24px rgba(0,0,0,.6);font-size:13px;line-height:1.35}
+.ptip.pin{outline:2px solid var(--amber)}   /* clicked/tapped: stays open */
+.ptip b{display:block;margin-bottom:2px}.ptip p{margin:0}
 /* settings window */
 #settings{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:12px}
 .sbox{width:min(720px,100%);max-height:min(88vh,100%);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
 .shead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:2px solid var(--amber)}
 .shead h2{margin:0;font:800 16px/1 "Arial Narrow","Franklin Gothic Medium",Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
 .stabs{display:flex;gap:6px;padding:10px 14px 0;flex-wrap:wrap;align-items:center}
-.stabs #updBtn{background:transparent;border:1px solid var(--line)}.stabs .hint{margin:0}
+.stabs #updBtn{background:#d9453f;color:#fff;border:0}.stabs #updBtn.new{background:#2e9e5b}   /* red until a newer version is found, then green */.stabs .hint{margin:0}
 .stabs button{background:var(--ink);color:#e8eaee;padding:7px 14px}
 .stabs button.on{background:var(--amber);color:#111}
 .sbody{overflow:auto;padding:6px 16px 16px;line-height:1.5}
@@ -299,69 +301,91 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
 
         <h3>Getting started</h3>
         <ul>
-          <li>In Army Forge use <b>Share as Link</b>, paste the link into the box at the top and press <b>Import</b>. You need a connection to import.</li>
-          <li>Every list you import is saved on this device. Click the link box to open the <b>saved lists</b> and pick one to bring it back with its play state, with no connection needed. Paste the link and import again to refresh a list; your play state is kept. <b>✕</b> removes a list.</li>
+          <li><b>Import:</b> in Army Forge use <b>Share as Link</b>, paste the link into the box at the top and press <b>Import</b>. You need a connection to import.</li>
+          <li><b>Saved lists:</b> every list you import is saved on this device. Click the link box to open the saved lists and pick one to bring it back with its play state, with no connection needed. <b>✕</b> removes a list.</li>
+          <li><b>Refresh:</b> paste the link and import again to refresh a list. Your play state is kept.</li>
         </ul>
 
         <h3>Unit cards</h3>
         <ul>
-          <li>One card per unit. Combined units are merged into one card and identical units are collapsed.</li>
-          <li><b>Click to rename:</b> a unit name, the faction label (renames it for the whole army), a special rule or a weapon. Rule and weapon renames only apply to that faction, and values in brackets stay fixed.</li>
+          <li><b>One card per unit:</b> combined units are merged into one card and identical units are collapsed. Use Play qty for extra copies.</li>
+          <li><b>Rename:</b> click a unit name, the faction label (renames it for the whole army), a special rule or a weapon. Rule and weapon renames only apply to that faction, and values in brackets stay fixed.</li>
           <li><b>Reorder:</b> drag the grip bar above a card to move it. The order is saved with the list and is used by Play, print and export.</li>
-          <li><b>Play qty</b> under a card is how many copies of that unit appear in Play mode and in print (up to 20).</li>
-          <li><b>Images:</b> hover a card and press <b>Image</b> to pick from your library or use the camera (Capture or Cancel on the live preview). Sliders under the card set opacity, position and zoom. Images are saved per exact unit (name, stats and loadout), so two units with the same name keep their own pictures. A unit with no image of its own picks up the first image saved for that name. <b>Remove saved image</b> clears it.</li>
+          <li><b>Play qty:</b> under a card, sets how many copies of that unit appear in Play mode and in print (up to 20).</li>
+          <li><b>Images:</b> hover a card and press <b>Image</b> to pick from your library or use the camera (Capture or Cancel on the live preview). Sliders under the card set opacity, position and zoom. <b>Remove saved image</b> clears it.</li>
+          <li><b>Saved images:</b> images are saved per exact unit (name, stats and loadout), so two units with the same name keep their own pictures. A unit with no image of its own picks up the first image saved for that name.</li>
         </ul>
 
         <h3>Reference cards</h3>
         <ul>
-          <li>Open <b>Reference cards</b> and paste text into Core Special Rules, Faction Special Rules and Faction Spells. Write one rule per line as <code>Name:description</code>.</li>
-          <li>In Faction Special Rules and Faction Spells, leave a <b>blank line between factions</b>. Each faction gets its own cards and its own title; click a title to rename it. Long lists split across cards automatically.</li>
-          <li>Core Special Rules, Faction Special Rules and Faction Spells are kept in two collapsible sections: <b>Grimdark Future</b> and <b>Grimdark Future: Firefight</b> (which also has <b>Special Movement</b>). On Firefight unit cards, every unit always gets Falling, Pushing and Jumping (the list data doesn't include them), and any rule listed in Special Movement moves out of the main rules row. These sit at the bottom right, just above the weapons. Cards show the rules for the imported list's game system, picked automatically (Firefight lists use the Firefight boxes; anything else, or no list loaded, uses Grimdark Future).</li>
-          <li><b>Warfleets damage:</b> every system and weapon (not the turret, heroes or titles) has damage checkboxes: 2 each, or 4 for Armoured Plating. In Play mode, tick them on the card (each box is ticked on its own). A ship is DESTROYED when all of its systems and weapons are fully damaged. Every squadron has 2 damage checkboxes of its own. The bottom of each ship card has two speed boxes (Move, Cruise) and two defence boxes (Eva, Tou; both are X+ rolls). Each weapon line shows its facing (Front, Sides or Rear).</li>
-          <li><b>Warfleets</b> lists (game system <code>ftl</code>) load their ships as cards with Move, Cruise, Evade and Tough, the turret, weapons, and the title, hero and systems text from the list. Heroes, Titles and Systems are listed on the card front like campaign info. Their descriptions come only from the <b>Warfleets</b> section (Core Special Rules, Faction Special Rules, Heroes, Titles and Systems; all but Core can hold several factions, separated by a blank line). Costs like (+5pts) are hidden from the cards and popups, which also prints them as reference cards and fills the Play mode popups. Ships have no flip side.</li>
-          <li>Reference cards can have images too, with the same sliders and Remove button.</li>
-          <li>If you rename a rule on a unit card, change it in your pasted text as well so the Play mode popups still match. The pasted text is saved automatically.</li>
+          <li><b>Pasting rules:</b> open <b>Reference cards</b> and paste text into Core Special Rules, Faction Special Rules and Faction Spells. Write one rule per line as <code>Name:description</code>. The pasted text is saved automatically.</li>
+          <li><b>Factions:</b> in Faction Special Rules and Faction Spells, leave a blank line between factions. Each faction gets its own cards and its own title; click a title to rename it. Long lists split across cards automatically.</li>
+          <li><b>Game systems:</b> the rule boxes sit in collapsible sections: <b>Grimdark Future</b>, <b>Grimdark Future: Firefight</b>, <b>Warfleets</b> and <b>Campaign info</b>. Cards use the section that matches the imported list's game system, picked automatically (Firefight lists use the Firefight boxes; anything else, or no list loaded, uses Grimdark Future).</li>
+          <li><b>Firefight:</b> every unit always gets Falling, Pushing and Jumping (the list data doesn't include them), and any rule listed in <b>Special Movement</b> moves out of the main rules row. These sit at the bottom right of the card, just above the weapons.</li>
+          <li><b>Reference Cards Shown:</b> a group of checkboxes under Reference cards, one for each type of reference card. Untick a type to hide it from the screen, print, export and Play mode. Its pasted text is kept, so rule popups still work.</li>
+          <li><b>Images:</b> reference cards can have images too, with the same sliders and Remove button.</li>
+          <li><b>Renaming rules:</b> if you rename a rule on a unit card, change it in your pasted text as well so the Play mode popups still match.</li>
+        </ul>
+
+        <h3>Warfleets</h3>
+        <ul>
+          <li><b>Ships:</b> lists with game system <code>ftl</code> load their ships as cards with Move, Cruise, Evade and Tough, the turret, weapons, and the title, hero and systems text from the list. Heroes, Titles and Systems are listed on the card front like campaign info. Ships have no flip side.</li>
+          <li><b>Squadrons:</b> a squadron entry with a count (for example ×2) becomes one card at the cost of a single squadron, with Play qty starting at the count. Change Play qty for more or fewer copies. Other ships with a count above 1 stay as one card marked ×N.</li>
+          <li><b>Descriptions:</b> they come only from the <b>Warfleets</b> section (Core Special Rules, Faction Special Rules, Heroes, Titles and Systems; all but Core can hold several factions, separated by a blank line). They print as reference cards and fill the Play mode popups. Costs like (+5pts) are hidden from the cards and popups.</li>
+          <li><b>Damage:</b> every system and weapon (not the turret, heroes or titles) has damage boxes: 2 each, or 4 for Armoured Plating. Every squadron has 2 damage boxes of its own. A ship is DESTROYED when all of its systems and weapons are fully damaged.</li>
+          <li><b>In Play mode:</b> tick the damage boxes on the card. Each box is ticked on its own, and you can still tick them through the PINNED or DESTROYED stamp.</li>
+          <li><b>Card layout:</b> the bottom of each ship card has two speed boxes (Move, Cruise) and two defence boxes (Eva, Tou; both are X+ rolls). Each weapon line shows its facing (Front, Sides or Rear).</li>
         </ul>
 
         <h3>Campaign: injuries, talents, traits &amp; skills</h3>
         <ul>
-          <li>Paste your <b>Injuries</b>, <b>Talents</b>, <b>Traits</b> and <b>Skills</b> into their own boxes in the <b>Campaign info</b> section under Reference cards (<code>Name:description</code>). Each becomes a reference card. Nothing here is imported from Army Forge except a unit's XP.</li>
-          <li>None of this shows on the front of a card. Press the round <b>flip</b> button at the left of the name box to turn it over (press again to turn back). A red <b>!</b> beside the button means the back has something on it.</li>
-          <li>The back lists Injuries, Talents, Traits and Skills, each under its own heading. <b>Heroes</b> get all four; every other unit only gets <b>Talents</b>. Use <b>+ Add</b> to pick from your pasted list, or type your own; <b>×</b> removes one.</li>
-          <li><b>XP</b> sits at the bottom of the back. Use − and + to change it, or click the number to type one. It starts at Army Forge's value.</li>
-          <li>Each back is its own card. It prints and exports next to its unit, and is skipped if it has nothing on it. Flip and XP also work in Play mode, and hovering or tapping an entry shows its description.</li>
+          <li><b>Pasting:</b> paste your <b>Injuries</b>, <b>Talents</b>, <b>Traits</b> and <b>Skills</b> into their own boxes in the <b>Campaign info</b> section under Reference cards (<code>Name:description</code>). Each becomes a reference card. Nothing here is imported from Army Forge except a unit's XP.</li>
+          <li><b>Flip:</b> none of this shows on the front of a card. Press the round <b>flip</b> button at the left of the name box to turn it over (press again to turn back). A red <b>!</b> beside the button means the back has something on it.</li>
+          <li><b>Back contents:</b> the back lists Injuries, Talents, Traits and Skills, each under its own heading. <b>Heroes</b> get all four; every other unit only gets <b>Talents</b>. Use <b>+ Add</b> to pick from your pasted list, or type your own; <b>×</b> removes one.</li>
+          <li><b>XP:</b> sits at the bottom of the back. Use − and + to change it, or click the number to type one. It starts at Army Forge's value.</li>
+          <li><b>Printing:</b> each back is its own card. It prints and exports next to its unit, and is skipped if it has nothing on it.</li>
+          <li><b>In Play mode:</b> Flip and XP also work, and hovering or tapping an entry shows its description.</li>
         </ul>
 
         <h3>Layout &amp; sizes</h3>
-        <p>Card size, text sizes and colours for every part of the card, an optional <b>Traditional border</b> (default 3 mm, like a trading card, drawn in the Border colour), a <b>Vertical special rules</b> option that stacks the special rules on the front one per line, and <b>No card background</b> / <b>No reference body background</b> options that make those fills transparent so an image shows through (PNG exports keep the transparency).</p>
+        <ul>
+          <li><b>Sizes and colours:</b> set the card size, the text sizes and the colours for every part of the card.</li>
+          <li><b>Traditional border:</b> adds a border like a trading card (default 3 mm), drawn in the Border colour.</li>
+          <li><b>Vertical special rules:</b> stacks the special rules on the front one per line.</li>
+          <li><b>No card background / No reference body background:</b> make those fills transparent so an image shows through. PNG exports keep the transparency.</li>
+          <li><b>Enable card backs:</b> adds one extra card at the end of the grid where you set a shared back image. See Print &amp; export for printing backs.</li>
+          <li><b>Back page shift:</b> moves every back page by a few mm to cancel your printer's duplex drift. Positive Right moves the printing to the right, positive Down moves it down, as you see it on the printed side of the back page. Print one page double-sided, hold it to the light, and adjust until the backs sit behind the fronts. Applies only when card backs are enabled.</li>
+          <li><b>Demo mode:</b> shows core special rules only. Non-core rules are hidden on unit cards and weapons, the Faction Special Rules cards disappear, and any spell, skill, trait, injury or talent whose text uses a non-core rule is hidden too. A rule counts as core if it is in your pasted Core Special Rules (or flagged core in the loaded list), so keep that list complete. Nothing is deleted; turn it off to bring everything back.</li>
+        </ul>
 
         <h3>Play mode</h3>
         <ul>
-          <li><b>▶ Play</b> shows one card at a time. Swipe or use the ← → keys. <b>☰ Cards</b> opens the contents list, with the reference cards in a dropdown. <b>Exit</b> or Esc leaves.</li>
+          <li><b>Moving around:</b> <b>▶ Play</b> shows one card at a time. Swipe or use the ← → keys. <b>☰ Cards</b> opens the contents list, with the reference cards in a dropdown and a button to reset all wounds and unpin units. <b>Exit</b> or Esc leaves.</li>
           <li><b>Wounds:</b> units with Tough get a − / + box per model. When every model is out of wounds, a red <b>DESTROYED</b> stamp appears; healing removes it. Units without Tough aren't tracked.</li>
-          <li><b>Pin / Unpin</b> puts a PINNED stamp on a unit.</li>
-          <li>Several copies (Play qty above 1) get their own tracking, with Unit 1, Unit 2… buttons to switch.</li>
-          <li><b>Dice</b> rolls any number of d6 against a target and counts successes, 1s and 6s.</li>
-          <li>On spell cards in Play mode, special rules named in a spell's text (for example Evasive, Bane or AP(1)) are underlined. Hover or tap one to see its description, taken from the Faction Special Rules for that faction first, then Core Special Rules.</li>
-          <li><b>Spells</b> appears on units with Caster and shows that faction's spell cards. With several spell lists, it picks the one whose title contains the unit's faction name, so name them to match, for example "Prime Brothers Spells". Tap Spells again to return.</li>
-          <li>Hover (or tap) a special rule, or a rule inside a weapon's stats, to read its description from your pasted text.</li>
-          <li>Wounds, pins and renames are saved with the list.</li>
+          <li><b>Pin / Unpin:</b> puts a PINNED stamp on a unit.</li>
+          <li><b>Copies:</b> several copies (Play qty above 1) get their own tracking, with Unit 1, Unit 2… buttons to switch.</li>
+          <li><b>Dice:</b> rolls any number of d6 against a target and counts successes, 1s and 6s.</li>
+          <li><b>Rule popups:</b> hover (or tap) a special rule, a rule inside a weapon's stats, or a rule underlined in a spell's text to read its description from your pasted text. For spells it comes from the Faction Special Rules for that faction first, then Core Special Rules.</li>
+          <li><b>Pinning popups:</b> click or tap a rule to keep its popup open. Click it again, click elsewhere or press Esc to close it.</li>
+          <li><b>Nested popups:</b> rules named inside a popup are underlined too. Hover or click one to open another popup on top, as many levels deep as you like.</li>
+          <li><b>Spells:</b> appears on units with Caster and shows that faction's spell cards. With several spell lists, it picks the one whose title contains the unit's faction name, so name them to match, for example "Prime Brothers Spells". Tap Spells again to return.</li>
+          <li><b>Saved state:</b> wounds, damage boxes and pins are saved with the list.</li>
         </ul>
 
         <h3>Print &amp; export</h3>
-        <p>The <b>Export</b> button opens a menu:</p>
         <ul>
-          <li><b>Export to Printer</b> lays the cards out on A4, one copy per Play qty. Fronts and backs are placed as separate cards with the same gap everywhere, so you can cut along straight lines.</li>
-          <li><b>Enable card backs</b> (Layout &amp; sizes) adds one extra card at the end of the grid where you set a shared back image. When printing, every card gets that image on its reverse unless it has campaign info, in which case its campaign back is used. Backs are printed on their own pages, mirrored so they line up behind the fronts: turn on <b>two-sided / duplex printing, flip on long edge</b> in the print dialog. The page can't see your printer's duplex setting, so with duplex off the backs print as separate sheets.</li>
-          <li><b>Demo mode</b> (Layout &amp; sizes) shows core special rules only. Non-core rules are hidden on unit cards and weapons, the Faction Special Rules cards disappear, and any spell, skill, trait, injury or talent whose text uses a non-core rule is hidden too. A rule counts as core if it is in your pasted Core Special Rules (or flagged core in the loaded list), so keep that list complete. Nothing is deleted; turn it off to bring everything back.</li>
-          <li><b>Back page shift</b> (Layout &amp; sizes) moves every back page by a few mm to cancel your printer's duplex drift: positive Right moves the printing to the right, positive Down moves it down, as you see it on the printed side of the back page. Print one page double-sided, hold it to the light, and adjust until the backs sit behind the fronts. Applies only when card backs are enabled.</li>
-          <li><b>Look for updates</b> (next to the Data tab in Settings). The installed app runs from its offline copy and only checks for a newer version when you press this button, so nothing runs in the background. If one is found, <b>Update now</b> downloads it and reloads. Your lists, images and settings are kept. In a normal browser tab it also checks once when the page opens.</li>
-          <li><b>Export to PNGs</b> saves every card as a 300 dpi image in a single zip.</li>
-          <li><b>Export to JSON</b> saves the list, play state, images, pasted rules text and layout to one file. With the link box empty, <b>Import</b> asks for that file, so you can move a list to another device.</li>
+          <li><b>Export to Printer:</b> lays the cards out on A4, one copy per Play qty. Fronts and backs are placed as separate cards with the same gap everywhere, so you can cut along straight lines.</li>
+          <li><b>Card backs:</b> when printing, every card gets the shared back image on its reverse unless it has campaign info, in which case its campaign back is used. Backs are printed on their own pages, mirrored so they line up behind the fronts: turn on <b>two-sided / duplex printing, flip on long edge</b> in the print dialog. The page can't see your printer's duplex setting, so with duplex off the backs print as separate sheets.</li>
+          <li><b>Export to PNGs:</b> saves every card as a 300 dpi image in a single zip.</li>
+          <li><b>Export to JSON:</b> saves the list, play state, images, pasted rules text and layout to one file. With the link box empty, <b>Import</b> asks for that file, so you can move a list to another device.</li>
         </ul>
 
         <h3>Install &amp; your data</h3>
-        <p>You can add the app to your home screen and open it offline. Saved lists, images, play state and pasted text live only in this browser on this device, so they won't appear on another device and are lost if you clear your browser's site data.</p>
+        <ul>
+          <li><b>Install:</b> you can add the app to your home screen and open it offline.</li>
+          <li><b>Where your data lives:</b> saved lists, images, play state and pasted text live only in this browser on this device, so they won't appear on another device and are lost if you clear your browser's site data.</li>
+          <li><b>Look for updates:</b> the button next to the Data tab in Settings. The installed app runs from its offline copy and only checks for a newer version when you press it, so nothing runs in the background. It is red until a newer version is found, then turns green and reads <b>Update now</b>, which downloads the update and reloads. Your lists, images and settings are kept. In a normal browser tab it also checks once when the page opens.</li>
+        </ul>
       </div>
       <div class="spane" data-pane="data" hidden>
         <h3>Delete all data</h3>
@@ -376,7 +400,6 @@ body.bordered .card::after{content:"";position:absolute;inset:0;border:var(--bw)
   <aside id="pToc" hidden></aside>
   <div id="pStage"></div>
   <div id="pTrack"></div>
-  <div id="pTip" hidden></div>
 </div>
 
 <script>
@@ -534,7 +557,7 @@ $('sizes').innerHTML = GROUPS.map(([title, sids, cids]) =>
   sids.map(id => { const [, l, v, mn, mx, st] = FIELDS.find(f => f[0] === id); return `<label>${l}<input type="number" id="${id}" value="${v}" min="${mn}" max="${mx}" step="${st}"></label>`; }).join('') +
   cids.map(id => { const [, l, v] = COLORS.find(c => c[0] === id); return `<label>${l}<input type="color" id="${id}" value="${v}"></label>`; }).join('') +
   `</div></div>`).join('');
-const refBox = ([k, t]) => `<label class="hint">${t}</label><textarea data-ref="${k}" placeholder="Name:description"></textarea>`;
+const refBox = ([k, t]) => `<span class="gl">${t}</span><textarea data-ref="${k}" placeholder="Name:description"></textarea>`;
 $('refs').insertAdjacentHTML('beforeend',
   `<details><summary>Grimdark Future</summary><div>${REFS.slice(0, 3).map(refBox).join('')}</div></details>` +
   `<details><summary>Grimdark Future: Firefight</summary><div>${FFREFS.map(refBox).join('')}</div></details>` +
@@ -1090,8 +1113,8 @@ const REFKINDS = [['All', [['core','Core Special Rules'],['faction','Faction Spe
   ['Firefight', [['move','Special Movement']]],
   ['Warfleets', [['heroes','Heroes'],['titles','Titles'],['systems','Systems']]],
   ['Campaign info', [['injuries','Injuries'],['talents','Talents'],['traits','Traits'],['skills','Skills']]]];
-$('refToggles').innerHTML = '<span class="gl">Show these reference card types</span>' +
-  REFKINDS.map(([g, ks]) => `<div class="row" style="margin-bottom:4px"><label style="min-width:9em;color:var(--amber)">${g}</label>${ks.map(([k, t]) => `<label><input type="checkbox" data-refshow="${k}" checked> ${t}</label>`).join('')}</div>`).join('') ;
+$('refToggles').innerHTML = '<details><summary style="color:var(--amber)">Reference Cards Shown</summary><div>' +
+  REFKINDS.map(([g, ks]) => `<div style="margin-bottom:8px"><div style="color:var(--amber);font-weight:600;margin-bottom:3px">${g}</div><div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px">${ks.map(([k, t]) => `<label><input type="checkbox" data-refshow="${k}" checked> ${t}</label>`).join('')}</div></div>`).join('') + '</div></details>';
 const syncRefToggles = () => document.querySelectorAll('[data-refshow]').forEach(cb => { cb.checked = !REFHIDE.has(cb.dataset.refshow); });
 document.querySelectorAll('[data-refshow]').forEach(cb => cb.addEventListener('change', () => {
   cb.checked ? REFHIDE.delete(cb.dataset.refshow) : REFHIDE.add(cb.dataset.refshow); layoutChanged();
@@ -1162,7 +1185,7 @@ const closeSettings = () => { $('settings').hidden = true; };
 const APP_CACHE = 'card-forge-app', INDEX_URL = new URL('index.html', document.baseURI).href;   // keep both in step with sw.js
 const isApp = ['standalone', 'fullscreen', 'minimal-ui'].some(m => matchMedia(`(display-mode: ${m})`).matches) || navigator.standalone === true;
 let updState = 'idle';
-const updUi = (msg, btn) => { $('updMsg').textContent = msg; if (btn) $('updBtn').textContent = btn; };
+const updUi = (msg, btn) => { $('updMsg').textContent = msg; if (btn) { $('updBtn').textContent = btn; $('updBtn').classList.add('new'); } };
 async function serverBuild() {
   const res = await fetch(INDEX_URL + '?cf=' + Date.now(), { cache: 'no-store' });   // no-store requests bypass the service worker and go to the network
   if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1404,19 +1427,65 @@ function go(d) {
   }
 }
 
-// rule description popup: hover on desktop, tap on touch
-function showTip(el) {
-  const e = el && play.lookup.get(el.dataset.tip); if (!e) return hideTip();
-  const tp = $('pTip'); tp.innerHTML = `<b>${esc(e.name)}${el.dataset.alias ? ` [${esc(el.dataset.alias)}]` : ''}</b><p>${esc(e.desc || '—')}</p>`; tp.hidden = false;
+// rule description popups. Hover previews one (desktop); click or tap pins it so it stays open. Rules named inside a popup are links too, and open a further popup on top, to any depth.
+const tips = [];   // one entry per nesting level: {key, anchor, node, pinned}
+let tipTimer = 0;
+function tipText(desc, selfKey) {   // escape the description and turn other known rule names in it into hoverable/clickable links
+  const L = play.lookup;
+  if (play.tipFor !== L) {
+    const names = new Map(); for (const [k, e] of L) { const n = ruleBase(e.name).toLowerCase(); if (n.length > 1 && !names.has(n)) names.set(n, k); }
+    play.tipNames = names; play.tipFor = L;
+    play.tipRx = names.size ? new RegExp('(^|[^A-Za-z0-9])(' + [...names.keys()].sort((x, y) => y.length - x.length).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')((?:\\s?\\([^)]{0,8}\\))?)(?![A-Za-z0-9])', 'gi') : null;
+  }
+  if (!play.tipRx) return esc(desc);
+  let out = '', last = 0, m; play.tipRx.lastIndex = 0;
+  while ((m = play.tipRx.exec(desc))) {
+    const key = play.tipNames.get(m[2].toLowerCase()); if (!key || key === selfKey || !/^[A-Z0-9]/.test(m[2])) continue;   // rule names are capitalised in the text; skip the rule's own name
+    const st = m.index + m[1].length, txt = m[2] + m[3];
+    out += esc(desc.slice(last, st)) + `<span class="wr" data-tip="${esc(key)}">${esc(txt)}</span>`; last = st + txt.length;
+  }
+  return out + esc(desc.slice(last));
+}
+function tipClose(from = 0) { while (tips.length > from) tips.pop().node.remove(); }
+function hideTip() { clearTimeout(tipTimer); tipClose(0); }
+function tipLevel(el) {   // a rule on the card opens level 0; a rule inside a popup opens the level after it
+  const n = el.closest('.ptip'); if (!n) return 0;
+  const i = tips.findIndex(t => t.node === n); return i < 0 ? -1 : i + 1;
+}
+function tipPin(lv) { for (let i = 0; i <= lv && i < tips.length; i++) { tips[i].pinned = true; tips[i].node.classList.add('pin'); } }
+function showTip(el, pin) {
+  const key = el?.dataset.tip, e = key && play.lookup.get(key); if (!e) return;
+  const lv = tipLevel(el); if (lv < 0) return;
+  const cur = tips[lv];
+  if (cur && cur.key === key && cur.anchor === el) { if (pin) tipPin(lv); return; }
+  if (cur && cur.pinned && !pin) return;   // hovering never replaces a popup you pinned
+  tipClose(lv);
+  const tp = document.createElement('div'); tp.className = 'ptip'; tp.style.zIndex = 120 + lv;
+  tp.innerHTML = `<b>${esc(e.name)}${el.dataset.alias ? ` [${esc(el.dataset.alias)}]` : ''}</b><p>${tipText(e.desc || '—', key)}</p>`;
+  $('play').appendChild(tp);
   const r = el.getBoundingClientRect(), w = tp.offsetWidth, h = tp.offsetHeight;
   let top = r.bottom + 8; if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 8);
-  tp.style.top = top + 'px'; tp.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px'; tp._el = el;
+  tp.style.top = top + 'px'; tp.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+  tips.push({ key, anchor: el, node: tp, pinned: false });
+  if (pin) tipPin(lv);
 }
-function hideTip() { const tp = $('pTip'); tp.hidden = true; tp._el = null; }
-let ptype = 'mouse';
-$('pStage').addEventListener('pointerdown', e => { ptype = e.pointerType; });
-$('pStage').addEventListener('pointerover', e => { if (e.pointerType === 'mouse') showTip(e.target.closest('[data-tip]')); });
-$('pStage').addEventListener('pointerout', e => { if (e.pointerType === 'mouse') hideTip(); });
+const tipSweep = () => { const i = tips.findIndex(t => !t.pinned); if (i >= 0) tipClose(i); };   // drop hover previews, keep pinned popups
+$('play').addEventListener('pointerover', e => {
+  if (e.pointerType !== 'mouse') return;
+  const el = e.target.closest?.('[data-tip]');
+  if (el) { clearTimeout(tipTimer); showTip(el, false); } else if (e.target.closest?.('.ptip')) clearTimeout(tipTimer);   // pointer travelling into a popup keeps it open
+});
+$('play').addEventListener('pointerout', e => {
+  if (e.pointerType !== 'mouse' || !e.target.closest?.('[data-tip],.ptip')) return;
+  clearTimeout(tipTimer); tipTimer = setTimeout(tipSweep, 220);
+});
+$('play').addEventListener('click', e => {   // click or tap: pin it (again: close it); works on the card and inside popups
+  const el = e.target.closest?.('[data-tip]'); if (!el) return;
+  const lv = tipLevel(el); if (lv < 0) return;
+  const t = tips[lv];
+  t && t.pinned && t.key === el.dataset.tip && t.anchor === el ? tipClose(lv) : showTip(el, true);
+});
+document.addEventListener('pointerdown', e => { if (tips.length && !e.target.closest?.('[data-tip],.ptip')) hideTip(); });   // click elsewhere closes them all
 function readDice() {
   const d = play.dice, root = $('pStage'), nEl = root.querySelector('[data-dn]'), tEl = root.querySelector('[data-dt]');
   d.n = clampInt(nEl ? nEl.value : d.n, 1, 40, 1); d.target = clampInt(tEl ? tEl.value : d.target, 2, 6, 4);
@@ -1436,8 +1505,6 @@ $('pStage').addEventListener('click', e => {
     return;
   }
   if (e.target.closest('[data-a=roll]')) { e.preventDefault(); e.stopPropagation(); return doRoll(); }
-  if (ptype === 'mouse') return;
-  const el = e.target.closest('[data-tip]'); el && $('pTip')._el !== el ? showTip(el) : hideTip();
 });
 $('pStage').addEventListener('change', e => { if (play.dice && e.target.matches('[data-dn],[data-dt]')) readDice(); });
 
@@ -1493,7 +1560,7 @@ $('pStage').addEventListener('touchend', e => {
 document.addEventListener('keydown', e => {
   if (!play.on) return;
   if (e.key === 'ArrowRight') go(1); else if (e.key === 'ArrowLeft') go(-1);
-  else if (e.key === 'Escape') $('pToc').hidden ? closePlay() : ($('pToc').hidden = true);
+  else if (e.key === 'Escape') tips.length ? hideTip() : $('pToc').hidden ? closePlay() : ($('pToc').hidden = true);
 });
 addEventListener('resize', () => play.on && fitPlay());
 
